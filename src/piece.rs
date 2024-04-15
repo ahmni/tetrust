@@ -99,28 +99,33 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
             let piece = PieceBundle::new(&straight_pos);
             let piece = commands.spawn((piece, Active)).id();
 
+            println!("straight_pos: {:?}", straight_pos);
+
+            let relative_pos = Vec3::new(SQUARE_SIZE / 2., SQUARE_SIZE / 2., 0.0);
+            println!("relative_pos: {:?}", relative_pos);
+
             let child1 = commands
-                .spawn(PiecePartBundle::new(&piece_type, &straight_pos))
+                .spawn(PiecePartBundle::new(&piece_type, &relative_pos))
                 .id();
             let child2 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(straight_pos.x, straight_pos.y + SQUARE_SIZE, straight_pos.z),
+                    &Vec3::new(relative_pos.x, relative_pos.y + SQUARE_SIZE, relative_pos.z),
                 ))
                 .id();
             let child3 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(straight_pos.x, straight_pos.y - SQUARE_SIZE, straight_pos.z),
+                    &Vec3::new(relative_pos.x, relative_pos.y - SQUARE_SIZE, relative_pos.z),
                 ))
                 .id();
             let child4 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
                     &Vec3::new(
-                        straight_pos.x,
-                        straight_pos.y - SQUARE_SIZE * 2.0,
-                        straight_pos.z,
+                        relative_pos.x,
+                        relative_pos.y - SQUARE_SIZE * 2.0,
+                        relative_pos.z,
                     ),
                 ))
                 .id();
@@ -132,23 +137,30 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
             let piece = PieceBundle::new(&pos);
             let piece = commands.spawn((piece, Active)).id();
 
-            let child1 = commands.spawn(PiecePartBundle::new(&piece_type, &pos)).id();
+            let relative_pos = Vec3::new(0., 0., 0.0);
+            let child1 = commands
+                .spawn(PiecePartBundle::new(&piece_type, &relative_pos))
+                .id();
             let child2 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x + SQUARE_SIZE, pos.y, pos.z),
+                    &Vec3::new(relative_pos.x + SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             let child3 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x - SQUARE_SIZE, pos.y, pos.z),
+                    &Vec3::new(relative_pos.x - SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             let child4 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x - SQUARE_SIZE, pos.y + SQUARE_SIZE, pos.z),
+                    &Vec3::new(
+                        relative_pos.x - SQUARE_SIZE,
+                        relative_pos.y + SQUARE_SIZE,
+                        relative_pos.z,
+                    ),
                 ))
                 .id();
             commands
@@ -159,23 +171,30 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
             let piece = PieceBundle::new(&pos);
             let piece = commands.spawn((piece, Active)).id();
 
-            let child1 = commands.spawn(PiecePartBundle::new(&piece_type, &pos)).id();
+            let relative_pos = Vec3::new(0., 0., 0.0);
+            let child1 = commands
+                .spawn(PiecePartBundle::new(&piece_type, &relative_pos))
+                .id();
             let child2 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x + SQUARE_SIZE, pos.y, pos.z),
+                    &Vec3::new(relative_pos.x + SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             let child3 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x - SQUARE_SIZE, pos.y, pos.z),
+                    &Vec3::new(relative_pos.x - SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             let child4 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x + SQUARE_SIZE, pos.y + SQUARE_SIZE, pos.z),
+                    &Vec3::new(
+                        relative_pos.x + SQUARE_SIZE,
+                        relative_pos.y + SQUARE_SIZE,
+                        relative_pos.z,
+                    ),
                 ))
                 .id();
             commands
@@ -186,23 +205,30 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
             let piece = PieceBundle::new(&pos);
             let piece = commands.spawn((piece, Active)).id();
 
-            let child1 = commands.spawn(PiecePartBundle::new(&piece_type, &pos)).id();
+            let relative_pos = Vec3::new(0., 0., 0.0);
+            let child1 = commands
+                .spawn(PiecePartBundle::new(&piece_type, &relative_pos))
+                .id();
             let child2 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x, pos.y + SQUARE_SIZE, pos.z),
+                    &Vec3::new(relative_pos.x, relative_pos.y + SQUARE_SIZE, relative_pos.z),
                 ))
                 .id();
             let child3 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x + SQUARE_SIZE, pos.y + SQUARE_SIZE, pos.z),
+                    &Vec3::new(
+                        relative_pos.x + SQUARE_SIZE,
+                        relative_pos.y + SQUARE_SIZE,
+                        relative_pos.z,
+                    ),
                 ))
                 .id();
             let child4 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x - SQUARE_SIZE, pos.y, pos.z),
+                    &Vec3::new(relative_pos.x - SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             commands
@@ -213,23 +239,30 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
             let piece = PieceBundle::new(&pos);
             let piece = commands.spawn((piece, Active)).id();
 
-            let child1 = commands.spawn(PiecePartBundle::new(&piece_type, &pos)).id();
+            let relative_pos = Vec3::new(0., 0., 0.0);
+            let child1 = commands
+                .spawn(PiecePartBundle::new(&piece_type, &relative_pos))
+                .id();
             let child2 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x, pos.y + SQUARE_SIZE, pos.z),
+                    &Vec3::new(relative_pos.x, relative_pos.y + SQUARE_SIZE, relative_pos.z),
                 ))
                 .id();
             let child3 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x - SQUARE_SIZE, pos.y + SQUARE_SIZE, pos.z),
+                    &Vec3::new(
+                        relative_pos.x - SQUARE_SIZE,
+                        relative_pos.y + SQUARE_SIZE,
+                        relative_pos.z,
+                    ),
                 ))
                 .id();
             let child4 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x + SQUARE_SIZE, pos.y, pos.z),
+                    &Vec3::new(relative_pos.x + SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             commands
@@ -240,23 +273,26 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
             let piece = PieceBundle::new(&pos);
             let piece = commands.spawn((piece, Active)).id();
 
-            let child1 = commands.spawn(PiecePartBundle::new(&piece_type, &pos)).id();
+            let relative_pos = Vec3::new(0., 0., 0.0);
+            let child1 = commands
+                .spawn(PiecePartBundle::new(&piece_type, &relative_pos))
+                .id();
             let child2 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x, pos.y + SQUARE_SIZE, pos.z),
+                    &Vec3::new(relative_pos.x, relative_pos.y + SQUARE_SIZE, relative_pos.z),
                 ))
                 .id();
             let child3 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x + SQUARE_SIZE, pos.y, pos.z),
+                    &Vec3::new(relative_pos.x + SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             let child4 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(pos.x - SQUARE_SIZE, pos.y, pos.z),
+                    &Vec3::new(relative_pos.x - SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             commands
@@ -278,28 +314,29 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
             let piece = PieceBundle::new(&square_pos);
             let piece = commands.spawn((piece, Active)).id();
 
+            let relative_pos = Vec3::new(-SQUARE_SIZE / 2., -SQUARE_SIZE / 2., 0.0);
             let child1 = commands
-                .spawn(PiecePartBundle::new(&piece_type, &square_pos))
+                .spawn(PiecePartBundle::new(&piece_type, &relative_pos))
                 .id();
             let child2 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(square_pos.x + SQUARE_SIZE, square_pos.y, square_pos.z),
+                    &Vec3::new(relative_pos.x + SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             let child3 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(square_pos.x, square_pos.y + SQUARE_SIZE, square_pos.z),
+                    &Vec3::new(relative_pos.x, relative_pos.y + SQUARE_SIZE, relative_pos.z),
                 ))
                 .id();
             let child4 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
                     &Vec3::new(
-                        square_pos.x + SQUARE_SIZE,
-                        square_pos.y + SQUARE_SIZE,
-                        square_pos.z,
+                        relative_pos.x + SQUARE_SIZE,
+                        relative_pos.y + SQUARE_SIZE,
+                        relative_pos.z,
                     ),
                 ))
                 .id();

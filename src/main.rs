@@ -42,9 +42,9 @@ fn setup(mut commands: Commands) {
         });
     }
 
-    let starting_piece: PieceType = PieceType::Straight;
+    let starting_piece: PieceType = PieceType::ReverseL;
 
-    build_piece(&mut commands, starting_piece, Vec3::new(0.0, 0.0, -1.0));
+    build_piece(&mut commands, starting_piece, Vec3::new(0.0, 210.0, -1.0));
 }
 
 #[derive(Event)]
@@ -71,6 +71,7 @@ fn user_rotate_active(
                 );
                 let new_global_translation = child_global_translation + new_translation;
                 println!("new translation {:?}", new_translation);
+                println!("new global translation {:?}", new_global_translation);
                 // TODO: instead of stopping rotation, allow and led collision system handle
                 if new_global_translation.x < LEFT_GRID
                     || new_global_translation.x > RIGHT_GRID - SQUARE_SIZE
@@ -191,7 +192,7 @@ fn move_actives(
         }
     }
 
-    transform.translation.y -= SQUARE_SIZE;
+    //transform.translation.y -= SQUARE_SIZE;
 
     println!("{:?}", transform.translation);
 }
@@ -208,7 +209,7 @@ fn piece_placed(
         }
         commands.entity(ev.0).remove::<Active>();
         let new_piece = get_random_piece();
-        build_piece(&mut commands, new_piece, Vec3::new(0.0, 0.0, -1.0));
+        build_piece(&mut commands, new_piece, Vec3::new(0.0, 210.0, -1.0));
     }
 }
 
