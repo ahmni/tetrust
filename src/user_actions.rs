@@ -4,17 +4,21 @@ use bevy::prelude::*;
 #[derive(Resource)]
 pub struct MovementTimer(pub Timer);
 
+#[derive(Component)]
+pub struct Hold;
+
 pub fn user_rotate_active(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&Children, &mut Transform), With<Active>>,
     mut child_query: Query<(&GlobalTransform, &mut Transform), Without<Children>>,
 ) {
+    println!("query {:?}", query);
     let (children, mut transform) = query.get_single_mut().unwrap();
     //rotate left
     if keyboard_input.just_pressed(KeyCode::KeyQ) {
         let mut translations_to_apply: Vec<Vec3> = vec![];
         for &child in children.iter() {
-            let child_transform = child_query.get_mut(child).unwrap();
+            let child_transform = child_query.get(child).unwrap();
             let child_translation = child_transform.1.translation;
             let child_global_translation = child_transform.0.translation();
 
@@ -88,10 +92,6 @@ pub fn user_move_actives(
     }
     if keyboard_input.pressed(KeyCode::KeyS) {
         direction.y -= SQUARE_SIZE;
-    }
-    // TODO: Remove when done
-    if keyboard_input.pressed(KeyCode::KeyW) {
-        direction.y += SQUARE_SIZE;
     }
 
     for &child in children.iter() {

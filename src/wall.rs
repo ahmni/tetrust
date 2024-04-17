@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use crate::Collider;
-
 pub const BOTTOM_GRID: f32 = -300.0;
 pub const LEFT_GRID: f32 = -150.0;
 pub const RIGHT_GRID: f32 = 150.0;
@@ -17,7 +15,6 @@ const WALL_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 #[derive(Bundle)]
 pub struct WallBundle {
     sprite_bundle: SpriteBundle,
-    collider: Collider,
 }
 
 pub enum WallLocation {
@@ -78,7 +75,6 @@ impl WallBundle {
                 },
                 ..default()
             },
-            collider: Collider,
         }
     }
 }
