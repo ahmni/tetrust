@@ -1,4 +1,4 @@
-use crate::{Active, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE};
+use crate::{fix_position, Active, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE, TOP_GRID};
 use bevy::prelude::*;
 
 #[derive(Resource)]
@@ -6,10 +6,10 @@ pub struct MovementTimer(pub Timer);
 
 pub fn user_rotate_active(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&Children, With<Active>>,
+    mut query: Query<(&Children, &mut Transform), With<Active>>,
     mut child_query: Query<(&GlobalTransform, &mut Transform), Without<Children>>,
 ) {
-    let children = query.get_single_mut().unwrap();
+    let (children, mut transform) = query.get_single_mut().unwrap();
     //rotate left
     if keyboard_input.just_pressed(KeyCode::KeyQ) {
         let mut translations_to_apply: Vec<Vec3> = vec![];
@@ -24,15 +24,9 @@ pub fn user_rotate_active(
                 child_translation.z,
             );
             let new_global_translation = child_global_translation + new_translation;
-            println!("new translation {:?}", new_translation);
-            println!("new global translation {:?}", new_global_translation);
-            // TODO: instead of stopping rotation, allow and led collision system handle
-            if new_global_translation.x < LEFT_GRID
-                || new_global_translation.x > RIGHT_GRID - SQUARE_SIZE
-                || new_global_translation.y < BOTTOM_GRID
-            {
-                return;
-            }
+            //println!("new translation {:?}", new_translation);
+            //println!("new global translation {:?}", new_global_translation);
+            fix_position(new_global_translation, &mut transform);
 
             translations_to_apply.push(new_translation);
         }
@@ -55,14 +49,8 @@ pub fn user_rotate_active(
                 child_translation.z,
             );
             let new_global_translation = child_global_translation + new_translation;
-            println!("new translation {:?}", new_translation);
-            println!("new global translation {:?}", new_global_translation);
-            if new_global_translation.x < LEFT_GRID
-                || new_global_translation.x > RIGHT_GRID - SQUARE_SIZE
-                || new_global_translation.y < BOTTOM_GRID
-            {
-                return;
-            }
+            fix_position(new_global_translation, &mut transform);
+
             translations_to_apply.push(new_translation);
             //child_transform.1.translation = new_translation;
         }
@@ -101,13 +89,15 @@ pub fn user_move_actives(
     if keyboard_input.pressed(KeyCode::KeyS) {
         direction.y -= SQUARE_SIZE;
     }
+    // TODO: Remove when done
+    if keyboard_input.pressed(KeyCode::KeyW) {
+        direction.y += SQUARE_SIZE;
+    }
 
-    //println!("iterating through children");
     for &child in children.iter() {
         let child_transform = child_query.get(child).unwrap();
         let child_translation = child_transform.translation();
         let new_translation = child_translation + direction;
-        //println!("new translation {:?}", new_translation);
         if new_translation.x < LEFT_GRID
             || new_translation.x > RIGHT_GRID - SQUARE_SIZE
             || new_translation.y < BOTTOM_GRID

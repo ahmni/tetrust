@@ -7,7 +7,7 @@ pub const LEFT_GRID: f32 = -150.0;
 pub const RIGHT_GRID: f32 = 150.0;
 pub const TOP_GRID: f32 = 300.0;
 
-const WALL_THICKNESS: f32 = 10.0;
+pub const WALL_THICKNESS: f32 = 10.0;
 
 pub const GRID_LINE_COLOR: Color = Color::rgb(0.5, 0.5, 0.5);
 pub const GRID_LINE_THICKNESS: f32 = 2.0;

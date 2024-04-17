@@ -1,14 +1,13 @@
+mod collision;
 mod piece;
 mod user_actions;
 mod wall;
 
 use bevy::prelude::*;
+use collision::*;
 use piece::*;
 use user_actions::*;
 use wall::*;
-
-#[derive(Component)]
-struct Collider;
 
 fn setup(mut commands: Commands) {
     commands.spawn(Camera2dBundle::default());
@@ -44,9 +43,9 @@ fn setup(mut commands: Commands) {
         });
     }
 
-    let starting_piece: PieceType = PieceType::ReverseL;
+    let starting_piece: PieceType = PieceType::Straight;
 
-    build_piece(&mut commands, starting_piece, Vec3::new(0.0, 210.0, -1.0));
+    build_active_piece(&mut commands, starting_piece, Vec3::new(0.0, 210.0, -1.0));
 }
 
 #[derive(Event)]
@@ -54,7 +53,7 @@ struct PiecePlacedEvent(Entity);
 
 fn move_actives(
     mut ev_piece_placed: EventWriter<PiecePlacedEvent>,
-    mut query: Query<(&Children, Entity, &mut Transform), With<Active>>,
+    mut query: Query<(&Children, Entity, &mut Transform), (With<Active>, Without<Parent>)>,
     child_query: Query<&GlobalTransform, Without<Children>>,
     time: Res<Time>,
     mut timer: ResMut<ActiveTimer>,
@@ -73,6 +72,7 @@ fn move_actives(
         if new_translation < BOTTOM_GRID {
             println!("piece placed");
             ev_piece_placed.send(PiecePlacedEvent(entity));
+            fix_position(child_transform.translation(), &mut transform);
             return;
         }
     }
@@ -94,15 +94,9 @@ fn piece_placed(
         }
         commands.entity(ev.0).remove::<Active>();
         let new_piece = get_random_piece();
-        build_piece(&mut commands, new_piece, Vec3::new(0.0, 210.0, -1.0));
+        build_active_piece(&mut commands, new_piece, Vec3::new(0.0, 210.0, -1.0));
     }
 }
-
-// Collider system:
-// - Check if any active piece is colliding with left or right wall
-// - If so, push peace back inside the game
-// - Also check if any active piece is colliding with bottom wall
-// - If so, deactivate the piece and spawn a new one. Store old piece y position
 
 #[derive(Resource)]
 struct ActiveTimer(Timer);
@@ -120,10 +114,15 @@ fn main() {
         .add_systems(
             Update,
             (
-                move_actives,
-                user_move_actives,
-                user_rotate_active,
-                piece_placed,
+                check_in_bounds,
+                (
+                    move_actives,
+                    user_move_actives,
+                    user_rotate_active,
+                    piece_placed,
+                )
+                    .chain()
+                    .before(check_in_bounds),
             ),
         )
         .run();

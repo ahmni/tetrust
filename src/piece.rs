@@ -6,13 +6,12 @@ use rand::Rng;
 
 pub const SQUARE_SIZE: f32 = 30.0;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Active;
 
 #[derive(Bundle)]
 pub struct PieceBundle {
     spatial_bundle: SpatialBundle,
-    collider: Collider,
 }
 
 pub enum PieceType {
@@ -54,7 +53,6 @@ impl PieceBundle {
                 visibility: Visibility::Visible,
                 ..default()
             },
-            collider: Collider,
         }
     }
 }
@@ -89,7 +87,20 @@ pub fn get_random_piece() -> PieceType {
     }
 }
 
+pub fn build_active_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
+    internal_build_piece(commands, piece_type, pos, Some(Active));
+}
+
 pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
+    internal_build_piece(commands, piece_type, pos, None);
+}
+
+fn internal_build_piece(
+    commands: &mut Commands,
+    piece_type: PieceType,
+    pos: Vec3,
+    active: Option<Active>,
+) {
     match piece_type {
         PieceType::Straight => {
             // Needed to change origin pivot point when rotating
@@ -97,12 +108,9 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
             let straight_pos = Vec3::new(pos.x + SQUARE_SIZE / 2., pos.y + SQUARE_SIZE / 2., pos.z);
 
             let piece = PieceBundle::new(&straight_pos);
-            let piece = commands.spawn((piece, Active)).id();
-
-            println!("straight_pos: {:?}", straight_pos);
+            let piece = commands.spawn(piece).id();
 
             let relative_pos = Vec3::new(SQUARE_SIZE / 2., SQUARE_SIZE / 2., 0.0);
-            println!("relative_pos: {:?}", relative_pos);
 
             let child1 = commands
                 .spawn(PiecePartBundle::new(&piece_type, &relative_pos))
@@ -129,9 +137,13 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
                     ),
                 ))
                 .id();
-            commands
-                .entity(piece)
-                .push_children(&[child1, child2, child3, child4]);
+
+            combine_piece_parts(
+                commands,
+                piece,
+                active,
+                vec![child1, child2, child3, child4],
+            );
         }
         PieceType::ReverseL => {
             let piece = PieceBundle::new(&pos);
@@ -163,9 +175,12 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
                     ),
                 ))
                 .id();
-            commands
-                .entity(piece)
-                .push_children(&[child1, child2, child3, child4]);
+            combine_piece_parts(
+                commands,
+                piece,
+                active,
+                vec![child1, child2, child3, child4],
+            );
         }
         PieceType::L => {
             let piece = PieceBundle::new(&pos);
@@ -197,9 +212,12 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
                     ),
                 ))
                 .id();
-            commands
-                .entity(piece)
-                .push_children(&[child1, child2, child3, child4]);
+            combine_piece_parts(
+                commands,
+                piece,
+                active,
+                vec![child1, child2, child3, child4],
+            );
         }
         PieceType::Z => {
             let piece = PieceBundle::new(&pos);
@@ -231,9 +249,12 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
                     &Vec3::new(relative_pos.x - SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
-            commands
-                .entity(piece)
-                .push_children(&[child1, child2, child3, child4]);
+            combine_piece_parts(
+                commands,
+                piece,
+                active,
+                vec![child1, child2, child3, child4],
+            );
         }
         PieceType::ReverseZ => {
             let piece = PieceBundle::new(&pos);
@@ -265,9 +286,12 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
                     &Vec3::new(relative_pos.x + SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
-            commands
-                .entity(piece)
-                .push_children(&[child1, child2, child3, child4]);
+            combine_piece_parts(
+                commands,
+                piece,
+                active,
+                vec![child1, child2, child3, child4],
+            );
         }
         PieceType::T => {
             let piece = PieceBundle::new(&pos);
@@ -295,9 +319,12 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
                     &Vec3::new(relative_pos.x - SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
-            commands
-                .entity(piece)
-                .push_children(&[child1, child2, child3, child4]);
+            combine_piece_parts(
+                commands,
+                piece,
+                active,
+                vec![child1, child2, child3, child4],
+            );
         }
         PieceType::Square => {
             // Needed to change origin pivot point when rotating
@@ -340,9 +367,26 @@ pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
                     ),
                 ))
                 .id();
-            commands
-                .entity(piece)
-                .push_children(&[child1, child2, child3, child4]);
+            combine_piece_parts(
+                commands,
+                piece,
+                active,
+                vec![child1, child2, child3, child4],
+            );
         }
     }
+}
+
+fn combine_piece_parts(
+    commands: &mut Commands,
+    piece: Entity,
+    active: Option<Active>,
+    children: Vec<Entity>,
+) {
+    if let Some(active) = active {
+        for entity in [piece].iter().chain(&children) {
+            commands.entity(*entity).insert(active.clone());
+        }
+    }
+    commands.entity(piece).push_children(&children);
 }
