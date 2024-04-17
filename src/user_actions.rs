@@ -12,7 +12,6 @@ pub fn user_rotate_active(
     mut query: Query<(&Children, &mut Transform), With<Active>>,
     mut child_query: Query<(&GlobalTransform, &mut Transform), Without<Children>>,
 ) {
-    println!("query {:?}", query);
     let (children, mut transform) = query.get_single_mut().unwrap();
     //rotate left
     if keyboard_input.just_pressed(KeyCode::KeyQ) {

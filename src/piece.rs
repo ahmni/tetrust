@@ -2,8 +2,6 @@ use bevy::{prelude::*, sprite::Anchor};
 
 use rand::Rng;
 
-use crate::Hold;
-
 pub const SQUARE_SIZE: f32 = 30.0;
 
 #[derive(Component, Clone)]
@@ -12,8 +10,10 @@ pub struct Active;
 #[derive(Bundle)]
 pub struct PieceBundle {
     spatial_bundle: SpatialBundle,
+    type_bundle: PieceType,
 }
 
+#[derive(Component, Clone, Eq, PartialEq, Debug)]
 pub enum PieceType {
     Straight,
     L,
@@ -46,13 +46,14 @@ impl PieceType {
 }
 
 impl PieceBundle {
-    pub fn new(pos: &Vec3) -> PieceBundle {
+    pub fn new(piece_type: &PieceType, pos: &Vec3) -> PieceBundle {
         PieceBundle {
             spatial_bundle: SpatialBundle {
                 transform: Transform::from_xyz(pos.x, pos.y, pos.z),
                 visibility: Visibility::Visible,
                 ..default()
             },
+            type_bundle: piece_type.clone(),
         }
     }
 }
@@ -107,7 +108,7 @@ fn internal_build_piece(
             // https://tetris.fandom.com/wiki/SRS?file=SRS-pieces.png
             let straight_pos = Vec3::new(pos.x + SQUARE_SIZE / 2., pos.y + SQUARE_SIZE / 2., pos.z);
 
-            let piece = PieceBundle::new(&straight_pos);
+            let piece = PieceBundle::new(&piece_type, &straight_pos);
             let piece = commands.spawn(piece).id();
 
             let relative_pos = Vec3::new(SQUARE_SIZE / 2., SQUARE_SIZE / 2., 0.0);
@@ -118,21 +119,21 @@ fn internal_build_piece(
             let child2 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(relative_pos.x, relative_pos.y + SQUARE_SIZE, relative_pos.z),
+                    &Vec3::new(relative_pos.x + SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             let child3 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
-                    &Vec3::new(relative_pos.x, relative_pos.y - SQUARE_SIZE, relative_pos.z),
+                    &Vec3::new(relative_pos.x - SQUARE_SIZE, relative_pos.y, relative_pos.z),
                 ))
                 .id();
             let child4 = commands
                 .spawn(PiecePartBundle::new(
                     &piece_type,
                     &Vec3::new(
-                        relative_pos.x,
-                        relative_pos.y - SQUARE_SIZE * 2.0,
+                        relative_pos.x - SQUARE_SIZE * 2.0,
+                        relative_pos.y,
                         relative_pos.z,
                     ),
                 ))
@@ -148,7 +149,7 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::ReverseL => {
-            let piece = PieceBundle::new(&pos);
+            let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
             let relative_pos = Vec3::new(0., 0., 0.0);
@@ -186,7 +187,7 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::L => {
-            let piece = PieceBundle::new(&pos);
+            let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
             let relative_pos = Vec3::new(0., 0., 0.0);
@@ -224,7 +225,7 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::Z => {
-            let piece = PieceBundle::new(&pos);
+            let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
             let relative_pos = Vec3::new(0., 0., 0.0);
@@ -262,7 +263,7 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::ReverseZ => {
-            let piece = PieceBundle::new(&pos);
+            let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
             let relative_pos = Vec3::new(0., 0., 0.0);
@@ -300,7 +301,7 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::T => {
-            let piece = PieceBundle::new(&pos);
+            let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
             let relative_pos = Vec3::new(0., 0., 0.0);
@@ -345,7 +346,7 @@ fn internal_build_piece(
             // so we need to offset the originl pivot point by the center of the botom-left block
             // so that the relative position of the bottom left block is (-15,-15), and the center of the square is at (0,0).
             let square_pos = Vec3::new(pos.x - SQUARE_SIZE / 2., pos.y - SQUARE_SIZE / 2., pos.z);
-            let piece = PieceBundle::new(&square_pos);
+            let piece = PieceBundle::new(&piece_type, &square_pos);
             let piece = commands.spawn(piece).id();
 
             let relative_pos = Vec3::new(-SQUARE_SIZE / 2., -SQUARE_SIZE / 2., 0.0);

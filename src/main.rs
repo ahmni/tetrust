@@ -45,7 +45,7 @@ fn setup(mut commands: Commands, mut next_pieces: ResMut<NextPieces>) {
 
     let starting_piece: PieceType = PieceType::Straight;
 
-    build_active_piece(&mut commands, starting_piece, Vec3::new(0.0, 210.0, -1.0));
+    build_active_piece(&mut commands, starting_piece, Vec3::new(0.0, 240.0, -1.0));
 
     for _ in 0..3 {
         let new_piece = get_random_piece();
@@ -93,7 +93,9 @@ fn move_actives(
 fn piece_placed(
     mut commands: Commands,
     query: Query<&Children, With<Active>>,
+    mut next_piece_query: Query<(&Children, &mut Transform, &PieceType), With<Children>>,
     mut ev_piece_placed: EventReader<PiecePlacedEvent>,
+    mut next_pieces: ResMut<NextPieces>,
 ) {
     for ev in ev_piece_placed.read() {
         let children = query.get(ev.0).unwrap();
@@ -103,8 +105,34 @@ fn piece_placed(
         }
         commands.entity(ev.0).remove::<Active>();
         commands.entity(ev.0).insert(Placed);
+
+        let next_piece = next_pieces.0.remove(0);
+        let (children, mut transform, piece_type) = next_piece_query.get_mut(next_piece).unwrap();
+        for child in children {
+            commands.entity(*child).insert(Active);
+        }
+        commands.entity(next_piece).insert(Active);
+        // if square or straight, position needs to move shifted up and to the right by SQUARE_SIZE
+        // / 2.0
+        move_piece_to_board(&piece_type, &mut transform.translation);
+
         let new_piece = get_random_piece();
-        build_active_piece(&mut commands, new_piece, Vec3::new(0.0, 210.0, -1.0));
+        let entities = build_piece(&mut commands, new_piece, Vec3::new(0.0, 210.0, -1.0));
+        next_pieces.0.push(entities[0]);
+    }
+}
+
+fn move_piece_to_board(piece_type: &PieceType, translation: &mut Vec3) {
+    match piece_type {
+        PieceType::Square => {
+            *translation = Vec3::new(-SQUARE_SIZE / 2.0, 240.0 + SQUARE_SIZE / 2., -1.0);
+        }
+        PieceType::Straight => {
+            *translation = Vec3::new(SQUARE_SIZE / 2.0, 240.0 + SQUARE_SIZE / 2., -1.0);
+        }
+        _ => {
+            *translation = Vec3::new(0.0, 240.0, -1.0);
+        }
     }
 }
 
