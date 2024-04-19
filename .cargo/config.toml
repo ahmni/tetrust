@@ -1,0 +1,7 @@
+[target.wasm32-unknown-unknown]
+runner = "wasm-server-runner"
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies.bevy]
+version = "0.13.2"
+default-features = false
+features = ["dynamic_linking"]

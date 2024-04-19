@@ -1,4 +1,9 @@
-use crate::{fix_position, Active, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE, TOP_GRID};
+use std::collections::HashSet;
+
+use crate::{
+    fix_position, Active, Collision, CollisionEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID,
+    SQUARE_SIZE,
+};
 use bevy::prelude::*;
 
 #[derive(Resource)]
@@ -67,22 +72,34 @@ pub fn user_rotate_active(
 
 pub fn user_move_actives(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut query: Query<(&Children, &mut Transform), With<Active>>,
     child_query: Query<&GlobalTransform, Without<Children>>,
     time: Res<Time>,
     mut movement_timer: ResMut<MovementTimer>,
+    mut query: Query<(&Children, &mut Transform), With<Active>>,
+    mut ev_collision: EventReader<CollisionEvent>,
 ) {
     if !movement_timer.0.tick(time.delta()).just_finished() {
         return;
     }
+
+    let default_collision_event = CollisionEvent {
+        collision: HashSet::new(),
+    };
+
+    let collisions = &ev_collision
+        .read()
+        .next()
+        .unwrap_or(&default_collision_event)
+        .collision;
+
     let (children, mut transform) = query.get_single_mut().unwrap();
 
     let mut direction = Vec3::ZERO;
 
-    if keyboard_input.pressed(KeyCode::KeyA) {
+    if keyboard_input.pressed(KeyCode::KeyA) && !collisions.contains(&Collision::Right) {
         direction.x -= SQUARE_SIZE;
     }
-    if keyboard_input.pressed(KeyCode::KeyD) {
+    if keyboard_input.pressed(KeyCode::KeyD) && !collisions.contains(&Collision::Left) {
         direction.x += SQUARE_SIZE;
     }
     if keyboard_input.pressed(KeyCode::Space) {

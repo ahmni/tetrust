@@ -1,12 +1,11 @@
+use std::collections::HashSet;
+
 use bevy::{
-    math::bounding::{Aabb2d, BoundingVolume, IntersectsVolume},
+    math::bounding::{Aabb2d, BoundingCircle, BoundingVolume, IntersectsVolume},
     prelude::*,
 };
 
-use crate::{
-    build_active_piece, Active, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
-    TOP_GRID,
-};
+use crate::{Active, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE, TOP_GRID};
 
 // - Check if any active piece is colliding with left or right wall
 // - If so, push piece back inside the game
@@ -17,12 +16,17 @@ use crate::{
 #[derive(Component)]
 pub struct Placed;
 
-#[derive(Debug)]
-enum Collision {
+#[derive(Debug, Hash, Eq, PartialEq, Clone, Copy)]
+pub enum Collision {
     Left,
     Right,
     Top,
     Bottom,
+}
+
+#[derive(Event)]
+pub struct CollisionEvent {
+    pub collision: HashSet<Collision>,
 }
 
 pub fn check_in_bounds(
@@ -39,21 +43,21 @@ pub fn check_in_bounds(
 }
 
 pub fn check_collision(
-    mut query: Query<(&Children, Entity, &mut Transform), With<Active>>,
+    mut query: Query<(&Children, Entity), With<Active>>,
     child_query: Query<&GlobalTransform, Without<Children>>,
     collidee_query: Query<&GlobalTransform, (With<Placed>, Without<Active>)>,
     mut ev_piece_placed: EventWriter<PiecePlacedEvent>,
+    mut ev_collision: EventWriter<CollisionEvent>,
 ) {
-    let (children, entity, mut transform) = query.get_single_mut().unwrap();
+    let (children, entity) = query.get_single_mut().unwrap();
+
+    let mut collision_set: HashSet<Collision> = HashSet::new();
 
     for collider_transform in collidee_query.iter() {
         for &child in children.iter() {
             let global_transform = child_query.get(child).unwrap();
             let collision = collision(
-                Aabb2d::new(
-                    global_transform.translation().truncate(),
-                    Vec2::new(SQUARE_SIZE / 2. - 1., SQUARE_SIZE / 2.),
-                ),
+                BoundingCircle::new(global_transform.translation().truncate(), SQUARE_SIZE / 2.),
                 Aabb2d::new(
                     collider_transform.translation().truncate(),
                     Vec2::new(SQUARE_SIZE / 2., SQUARE_SIZE / 2.),
@@ -64,23 +68,30 @@ pub fn check_collision(
                 println!("collision: {:?}", collision);
                 match collision {
                     Collision::Left => {
-                        transform.translation.x += SQUARE_SIZE;
+                        collision_set.insert(Collision::Left);
                     }
                     Collision::Right => {
-                        //transform.translation.x -= SQUARE_SIZE;
+                        collision_set.insert(Collision::Right);
                     }
                     Collision::Top => {
                         //transform.translation.y += SQUARE_SIZE;
+                        if global_transform.translation().y > TOP_GRID - SQUARE_SIZE * 2.0 {
+                            // TODO: implement game over state
+                            panic!("Game Over");
+                        }
                         ev_piece_placed.send(PiecePlacedEvent(entity));
                         return;
                     }
-                    Collision::Bottom => {
-                        //ev_piece_placed.send(PiecePlacedEvent(entity));
-                        return;
-                    }
+                    Collision::Bottom => {}
                 }
             }
         }
+    }
+
+    if !collision_set.is_empty() {
+        ev_collision.send(CollisionEvent {
+            collision: collision_set,
+        });
     }
 }
 
@@ -110,13 +121,13 @@ pub fn fix_position(translation: Vec3, transform: &mut Transform) {
 }
 
 // Currently
-fn collision(collider_bb: Aabb2d, collidee_bb: Aabb2d) -> Option<Collision> {
+fn collision(collider_bb: BoundingCircle, collidee_bb: Aabb2d) -> Option<Collision> {
     if !collider_bb.intersects(&collidee_bb) {
         return None;
     }
 
-    println!("collider_bb: {:?}", collider_bb);
-    println!("collidee_bb: {:?}", collidee_bb);
+    //println!("collider_bb: {:?}", collider_bb);
+    //println!("collidee_bb: {:?}", collidee_bb);
 
     let closest = collidee_bb.closest_point(collider_bb.center());
     let offset = collider_bb.center() - closest;
