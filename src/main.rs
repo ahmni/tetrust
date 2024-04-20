@@ -199,7 +199,11 @@ fn place_piece(
     move_piece_to_board(&piece_type, &mut transform.translation);
 
     let new_piece = get_random_piece();
-    let entities = build_piece(&mut commands, new_piece, Vec3::new(0.0, 210.0, -1.0));
+    let entities = build_piece(
+        &mut commands,
+        new_piece,
+        Vec3::new(RIGHT_GRID * 1.5, 90.0, -1.0),
+    );
     next_pieces.0.push(entities[0]);
 }
 
@@ -336,19 +340,17 @@ fn main() {
         .add_systems(Startup, setup)
         .add_systems(
             Update,
-            (
-                (
-                    shift_active_down,
-                    user_move_actives,
-                    user_rotate_active,
-                    check_collision,
-                    check_in_bounds,
-                    place_piece,
-                    hold_piece,
-                )
-                    .chain(),
+            ((
+                shift_active_down,
+                user_move_actives,
+                user_rotate_active,
+                check_collision,
+                check_in_bounds,
+                place_piece,
                 position_next_pieces,
-            ),
+                hold_piece,
+            )
+                .chain(),),
         )
         .run();
 }
