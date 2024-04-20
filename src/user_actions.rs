@@ -19,7 +19,7 @@ pub fn user_rotate_active(
 ) {
     let (children, mut transform) = query.get_single_mut().unwrap();
     //rotate left
-    if keyboard_input.just_pressed(KeyCode::KeyQ) {
+    if keyboard_input.just_pressed(KeyCode::KeyZ) {
         let mut translations_to_apply: Vec<Vec3> = vec![];
         for &child in children.iter() {
             let child_transform = child_query.get(child).unwrap();
@@ -45,7 +45,7 @@ pub fn user_rotate_active(
         }
     }
     //rotate right
-    if keyboard_input.just_pressed(KeyCode::KeyE) {
+    if keyboard_input.just_pressed(KeyCode::KeyX) {
         let mut translations_to_apply: Vec<Vec3> = vec![];
         for &child in children.iter() {
             let child_transform = child_query.get_mut(child).unwrap();
@@ -96,17 +96,17 @@ pub fn user_move_actives(
 
     let mut direction = Vec3::ZERO;
 
-    if keyboard_input.pressed(KeyCode::KeyA) && !collisions.contains(&Collision::Right) {
+    if keyboard_input.pressed(KeyCode::ArrowLeft) && !collisions.contains(&Collision::Right) {
         direction.x -= SQUARE_SIZE;
     }
-    if keyboard_input.pressed(KeyCode::KeyD) && !collisions.contains(&Collision::Left) {
+    if keyboard_input.pressed(KeyCode::ArrowRight) && !collisions.contains(&Collision::Left) {
         direction.x += SQUARE_SIZE;
     }
     if keyboard_input.pressed(KeyCode::Space) {
         // TODO: change to go down until collide
         direction.y += BOTTOM_GRID;
     }
-    if keyboard_input.pressed(KeyCode::KeyS) {
+    if keyboard_input.pressed(KeyCode::ArrowDown) {
         direction.y -= SQUARE_SIZE;
     }
 
