@@ -51,6 +51,10 @@ pub fn check_collision(
 ) {
     let (children, entity) = query.get_single_mut().unwrap();
 
+    if check_wall_collision(children, &entity, &child_query, &mut ev_piece_placed) {
+        return;
+    }
+
     let mut collision_set: HashSet<Collision> = HashSet::new();
 
     for collider_transform in collidee_query.iter() {
@@ -65,7 +69,7 @@ pub fn check_collision(
             );
 
             if let Some(collision) = collision {
-                println!("collision: {:?}", collision);
+                //println!("collision: {:?}", collision);
                 match collision {
                     Collision::Left => {
                         collision_set.insert(Collision::Left);
@@ -93,6 +97,26 @@ pub fn check_collision(
             collision: collision_set,
         });
     }
+}
+
+fn check_wall_collision(
+    children: &Children,
+    entity: &Entity,
+    child_query: &Query<&GlobalTransform, Without<Children>>,
+    ev_piece_placed: &mut EventWriter<PiecePlacedEvent>,
+) -> bool {
+    for &child in children.iter() {
+        let child_transform = child_query.get(child).unwrap();
+        let child_translation = child_transform.translation();
+        if child_translation.x < LEFT_GRID {}
+        if child_translation.x > RIGHT_GRID - SQUARE_SIZE {}
+        if child_translation.y <= BOTTOM_GRID {
+            ev_piece_placed.send(PiecePlacedEvent(*entity));
+            return true;
+        }
+        if child_translation.y > TOP_GRID - SQUARE_SIZE {}
+    }
+    false
 }
 
 // TODO: Square rotate does not work with this function
