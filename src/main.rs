@@ -148,18 +148,23 @@ fn place_piece(
         println!("pieces removed after {:?}", placed_pieces);
 
         // shift rows down
-        let smallest_row = rows_to_remove.iter().min().unwrap_or(&0);
-        for i in (0..*smallest_row).rev() {
+        let biggest_row = rows_to_remove.iter().max().unwrap_or(&0);
+        let mut amount_to_shift = 1;
+        for i in (0..*biggest_row).rev() {
             let row = &mut placed_pieces.0[i];
+            if rows_to_remove.contains(&i) {
+                amount_to_shift += 1;
+                continue;
+            }
             for entity in row.iter() {
                 let (_, mut transform) = if let Ok(it) = child_query.get_mut(*entity) {
                     it
                 } else {
                     continue;
                 };
-                transform.translation.y -= SQUARE_SIZE * rows_to_remove.len() as f32;
+                transform.translation.y -= SQUARE_SIZE * amount_to_shift as f32;
             }
-            placed_pieces.0[i + rows_to_remove.len()] = row.clone();
+            placed_pieces.0[i + amount_to_shift] = row.clone();
             let row = &mut placed_pieces.0[i];
             row.clear();
         }
@@ -206,12 +211,13 @@ fn hold_piece(
     >,
     mut next_pieces: ResMut<NextPieces>,
     mut ev_piece_placed: EventReader<PiecePlacedEvent>,
+    // TODO: turn into component
     mut can_hold: Local<CanHoldPiece>,
 ) {
     if ev_piece_placed.read().count() > 0 {
         can_hold.0 = true;
     }
-    if !keyboard_input.just_pressed(KeyCode::KeyH) {
+    if !keyboard_input.just_pressed(KeyCode::KeyC) {
         return;
     }
     if !can_hold.0 {
