@@ -13,6 +13,9 @@ pub struct Level(pub u32);
 #[derive(Event)]
 pub struct ClearEvent(pub u32);
 
+#[derive(Event)]
+pub struct LevelUpEvent;
+
 fn get_score(rows_cleared: u32) -> u32 {
     match rows_cleared {
         1 => 100,
@@ -57,11 +60,12 @@ pub fn score(
 }
 
 pub fn level(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut drop_timer: ResMut<DropTimer>,
     mut level_query: Query<(&mut Level, &mut Text)>,
     mut ev_clear: EventReader<ClearEvent>,
     mut lines_cleared: Local<u32>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut ev_level_up: EventWriter<LevelUpEvent>,
 ) {
     let should_increase_level = keyboard_input.just_pressed(KeyCode::KeyL);
     for ev in ev_clear.read() {
@@ -76,6 +80,7 @@ pub fn level(
     let (mut level, mut text) = level_query.single_mut();
     level.0 += 1;
     text.sections[0].value = level.0.to_string();
+    ev_level_up.send(LevelUpEvent);
 
     // increase game speed
     let prev_duration = drop_timer.0.duration();

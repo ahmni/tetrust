@@ -28,6 +28,9 @@ pub struct PlacedPieces(pub Vec<Vec<Entity>>);
 #[derive(Event)]
 pub struct PiecePlacedEvent(pub Entity);
 
+#[derive(Event)]
+pub struct HoldPieceEvent;
+
 // start a timer
 // Add component to piece marking that it is trying to be placed
 //      Remove this component if not colliding with bottom_grid or another piece
@@ -87,39 +90,40 @@ pub fn place_piece(
     println!("{:?}", rows_to_remove);
     println!("{:?}", placed_pieces);
 
-    // despawn entities in full rows
-    for row in &rows_to_remove {
-        for entity in &placed_pieces.0[*row] {
-            commands.entity(*entity).despawn();
+    if rows_to_remove.len() > 0 {
+        // despawn entities in full rows
+        for row in &rows_to_remove {
+            for entity in &placed_pieces.0[*row] {
+                commands.entity(*entity).despawn();
+            }
+            placed_pieces.0[*row].clear();
         }
-        placed_pieces.0[*row].clear();
-    }
 
-    ev_clear.send(ClearEvent(rows_to_remove.len() as u32));
-    println!("pieces removed after {:?}", placed_pieces);
+        ev_clear.send(ClearEvent(rows_to_remove.len() as u32));
+        println!("pieces removed after {:?}", placed_pieces);
 
-    // shift rows down
-    let biggest_row = rows_to_remove.iter().max().unwrap_or(&0);
-    let mut amount_to_shift = 1;
-    for i in (0..*biggest_row).rev() {
-        let row = &mut placed_pieces.0[i];
-        if rows_to_remove.contains(&i) {
-            amount_to_shift += 1;
-            continue;
-        }
-        for entity in row.iter() {
-            let (_, mut transform) = if let Ok(it) = child_query.get_mut(*entity) {
-                it
-            } else {
+        // shift rows down
+        let biggest_row = rows_to_remove.iter().max().unwrap_or(&0);
+        let mut amount_to_shift = 1;
+        for i in (0..*biggest_row).rev() {
+            let row = &mut placed_pieces.0[i];
+            if rows_to_remove.contains(&i) {
+                amount_to_shift += 1;
                 continue;
-            };
-            transform.translation.y -= SQUARE_SIZE * amount_to_shift as f32;
+            }
+            for entity in row.iter() {
+                let (_, mut transform) = if let Ok(it) = child_query.get_mut(*entity) {
+                    it
+                } else {
+                    continue;
+                };
+                transform.translation.y -= SQUARE_SIZE * amount_to_shift as f32;
+            }
+            placed_pieces.0[i + amount_to_shift] = row.clone();
+            let row = &mut placed_pieces.0[i];
+            row.clear();
         }
-        placed_pieces.0[i + amount_to_shift] = row.clone();
-        let row = &mut placed_pieces.0[i];
-        row.clear();
     }
-
     // get next piece
     let next_piece = next_pieces.0.remove(0);
     let (children, mut transform, piece_type) = next_piece_query.get_mut(next_piece).unwrap();
@@ -165,6 +169,7 @@ pub fn hold_piece(
     >,
     mut next_pieces: ResMut<NextPieces>,
     mut ev_piece_placed: EventReader<PiecePlacedEvent>,
+    mut ev_hold: EventWriter<HoldPieceEvent>,
     // TODO: turn into component
     mut can_hold: Local<CanHoldPiece>,
 ) {
@@ -220,6 +225,8 @@ pub fn hold_piece(
         let entities = build_piece(&mut commands, new_piece, Vec3::new(0.0, NEXT_PIECE_Y, -1.0));
         next_pieces.0.push(entities[0]);
     }
+
+    ev_hold.send(HoldPieceEvent);
 }
 
 pub fn get_row(translation_y: f32) -> usize {

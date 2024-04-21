@@ -5,7 +5,10 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{Active, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE, TOP_GRID};
+use crate::{
+    Active, GameOverEvent, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
+    TOP_GRID,
+};
 
 // - Check if any active piece is colliding with left or right wall
 // - If so, push piece back inside the game
@@ -48,6 +51,7 @@ pub fn check_collision(
     collidee_query: Query<&GlobalTransform, (With<Placed>, Without<Active>)>,
     mut ev_piece_placed: EventWriter<PiecePlacedEvent>,
     mut ev_collision: EventWriter<CollisionEvent>,
+    mut ev_game_over: EventWriter<GameOverEvent>,
 ) {
     let (children, entity) = query.get_single_mut().unwrap();
 
@@ -81,6 +85,7 @@ pub fn check_collision(
                         //transform.translation.y += SQUARE_SIZE;
                         if global_transform.translation().y > TOP_GRID - SQUARE_SIZE * 2.0 {
                             // TODO: implement game over state
+                            ev_game_over.send(GameOverEvent);
                             panic!("Game Over");
                         }
                         // TODO: Instead of sending piece_placed event directly, send collision event and let place_piece handle when to drop piece

@@ -12,10 +12,17 @@ pub struct MovementTimer(pub Timer);
 #[derive(Component)]
 pub struct Hold;
 
+#[derive(Event)]
+pub struct MoveEvent;
+
+#[derive(Event)]
+pub struct RotateEvent;
+
 pub fn user_rotate_active(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut query: Query<(&Children, &mut Transform), With<Active>>,
     mut child_query: Query<(&GlobalTransform, &mut Transform), Without<Children>>,
+    mut ev_rotate: EventWriter<RotateEvent>,
 ) {
     let (children, mut transform) = query.get_single_mut().unwrap();
     //rotate left
@@ -43,6 +50,7 @@ pub fn user_rotate_active(
             let mut child_transform = child_query.get_mut(child).unwrap();
             child_transform.1.translation = translations_to_apply[i];
         }
+        ev_rotate.send(RotateEvent);
     }
     //rotate right
     if keyboard_input.just_pressed(KeyCode::KeyX) {
@@ -67,6 +75,7 @@ pub fn user_rotate_active(
             let mut child_transform = child_query.get_mut(child).unwrap();
             child_transform.1.translation = translations_to_apply[i];
         }
+        ev_rotate.send(RotateEvent);
     }
 }
 
@@ -77,6 +86,7 @@ pub fn user_move_actives(
     mut movement_timer: ResMut<MovementTimer>,
     mut query: Query<(&Children, &mut Transform), With<Active>>,
     mut ev_collision: EventReader<CollisionEvent>,
+    mut ev_move: EventWriter<MoveEvent>,
 ) {
     if !movement_timer.0.tick(time.delta()).just_finished() {
         return;
@@ -123,6 +133,9 @@ pub fn user_move_actives(
         }
     }
 
+    if direction.x != 0.0 {
+        ev_move.send(MoveEvent);
+    }
     transform.translation += direction;
     //print!("{:?}", transform.translation);
 }

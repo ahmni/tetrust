@@ -1,6 +1,7 @@
 mod collision;
 mod piece_actions;
 mod piece_builder;
+mod sounds;
 mod stats;
 mod user_actions;
 mod wall;
@@ -9,6 +10,7 @@ use bevy::prelude::*;
 use collision::*;
 use piece_actions::*;
 use piece_builder::*;
+use sounds::*;
 use stats::*;
 use user_actions::*;
 use wall::*;
@@ -156,11 +158,14 @@ fn setup(
     }
 }
 
+#[derive(Event)]
+pub struct GameOverEvent;
+
 fn main() {
     App::new()
-        .insert_resource(DropTimer(Timer::from_seconds(0.6, TimerMode::Repeating)))
+        .insert_resource(DropTimer(Timer::from_seconds(0.5, TimerMode::Repeating)))
         .insert_resource(MovementTimer(Timer::from_seconds(
-            0.1,
+            0.075,
             TimerMode::Repeating,
         )))
         .insert_resource(PlacedPieces(Vec::new()))
@@ -169,23 +174,32 @@ fn main() {
         .add_event::<PiecePlacedEvent>()
         .add_event::<CollisionEvent>()
         .add_event::<ClearEvent>()
+        .add_event::<MoveEvent>()
+        .add_event::<RotateEvent>()
+        .add_event::<LevelUpEvent>()
+        .add_event::<HoldPieceEvent>()
+        .add_event::<GameOverEvent>()
         .add_plugins(DefaultPlugins)
-        .add_systems(Startup, (setup, text_setup))
+        .add_systems(Startup, (setup, text_setup, sound_setup))
         .add_systems(
             Update,
-            ((
-                shift_active_down,
-                user_move_actives,
-                user_rotate_active,
-                check_collision,
-                check_in_bounds,
-                score,
-                place_piece,
-                position_next_pieces,
-                hold_piece,
-                level,
-            )
-                .chain(),),
+            (
+                (
+                    shift_active_down,
+                    user_move_actives,
+                    user_rotate_active,
+                    check_collision,
+                    check_in_bounds,
+                    score,
+                    place_piece,
+                    position_next_pieces,
+                    hold_piece,
+                    level,
+                )
+                    .chain(),
+                pause_music,
+                sound_effects,
+            ),
         )
         .run();
 }
