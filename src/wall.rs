@@ -7,8 +7,8 @@ pub const TOP_GRID: f32 = 300.0;
 
 pub const WALL_THICKNESS: f32 = 10.0;
 
-pub const GRID_LINE_COLOR: Color = Color::rgb(0.5, 0.5, 0.5);
-pub const GRID_LINE_THICKNESS: f32 = 2.0;
+pub const GRID_LINE_COLOR: Color = Color::rgba(0.3, 0.3, 0.3, 0.85);
+pub const GRID_LINE_THICKNESS: f32 = 1.5;
 
 const WALL_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 
@@ -28,10 +28,10 @@ impl WallLocation {
     /// Location of the *center* of the wall, used in `transform.translation()`
     fn position(&self) -> Vec2 {
         match self {
-            WallLocation::Left => Vec2::new(LEFT_GRID - GRID_LINE_THICKNESS * 2.0, 0.),
-            WallLocation::Right => Vec2::new(RIGHT_GRID + GRID_LINE_THICKNESS * 2.0, 0.),
-            WallLocation::Bottom => Vec2::new(0., BOTTOM_GRID - GRID_LINE_THICKNESS * 2.0),
-            WallLocation::Top => Vec2::new(0., TOP_GRID + GRID_LINE_THICKNESS * 2.0),
+            WallLocation::Left => Vec2::new(LEFT_GRID - GRID_LINE_THICKNESS * 4.0, 0.),
+            WallLocation::Right => Vec2::new(RIGHT_GRID + GRID_LINE_THICKNESS * 4.0, 0.),
+            WallLocation::Bottom => Vec2::new(0., BOTTOM_GRID - GRID_LINE_THICKNESS * 4.0),
+            WallLocation::Top => Vec2::new(0., TOP_GRID + GRID_LINE_THICKNESS * 4.0),
         }
     }
     /// (x, y) dimensions of the wall, used in `transform.scale()`

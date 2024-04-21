@@ -234,10 +234,10 @@ pub fn get_row(translation_y: f32) -> usize {
 }
 
 pub const HOLD_PIECE_Y: f32 = 160.0;
-pub const NEXT_PIECE_Y: f32 = 160.0;
+pub const NEXT_PIECE_Y: f32 = 140.0;
 
 fn move_to_hold(translation: &mut Vec3) {
-    *translation = Vec3::new(LEFT_GRID - SQUARE_SIZE * 4.0, HOLD_PIECE_Y, -1.0);
+    *translation = Vec3::new(LEFT_GRID - SQUARE_SIZE * 4.0, HOLD_PIECE_Y - 20.0, -1.0);
 }
 
 pub fn position_next_pieces(next_pieces: ResMut<NextPieces>, mut query: Query<&mut Transform>) {

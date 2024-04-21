@@ -29,7 +29,7 @@ fn text_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
     commands.spawn(Text2dBundle {
         text: Text::from_section("NEXT", text_style.clone()).with_justify(text_justification),
-        transform: Transform::from_xyz(RIGHT_GRID * 1.6, NEXT_PIECE_Y + 84.0, 0.0),
+        transform: Transform::from_xyz(RIGHT_GRID * 1.6, NEXT_PIECE_Y + 104.0, 0.0),
         ..default()
     });
 
