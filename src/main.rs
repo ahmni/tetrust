@@ -158,7 +158,7 @@ fn setup(
 
 fn main() {
     App::new()
-        .insert_resource(DropTimer(Timer::from_seconds(0.75, TimerMode::Repeating)))
+        .insert_resource(DropTimer(Timer::from_seconds(0.6, TimerMode::Repeating)))
         .insert_resource(MovementTimer(Timer::from_seconds(
             0.1,
             TimerMode::Repeating,

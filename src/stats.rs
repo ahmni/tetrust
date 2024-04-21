@@ -61,24 +61,35 @@ pub fn level(
     mut level_query: Query<(&mut Level, &mut Text)>,
     mut ev_clear: EventReader<ClearEvent>,
     mut lines_cleared: Local<u32>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
+    let should_increase_level = keyboard_input.just_pressed(KeyCode::KeyL);
     for ev in ev_clear.read() {
         *lines_cleared += ev.0;
     }
-    if *lines_cleared < 10 {
+    if *lines_cleared < 10 && !should_increase_level {
         return;
     }
 
-    *lines_cleared = *lines_cleared - 10;
-
-    let prev_duration = drop_timer.0.duration();
-    drop_timer
-        .0
-        .set_duration(prev_duration - Duration::from_millis(25));
-
+    *lines_cleared = *lines_cleared % 10;
     // increase level
     let (mut level, mut text) = level_query.single_mut();
-
     level.0 += 1;
     text.sections[0].value = level.0.to_string();
+
+    // increase game speed
+    let prev_duration = drop_timer.0.duration();
+    if level.0 <= 10 {
+        drop_timer
+            .0
+            .set_duration(prev_duration - Duration::from_millis(60));
+        println!("drop timer: {:?}", drop_timer.0.duration());
+        return;
+    }
+
+    if level.0 == 13 || level.0 == 16 || level.0 == 19 || level.0 == 29 {
+        drop_timer
+            .0
+            .set_duration(prev_duration - Duration::from_millis(7));
+    }
 }
