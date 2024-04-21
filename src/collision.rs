@@ -83,6 +83,7 @@ pub fn check_collision(
                             // TODO: implement game over state
                             panic!("Game Over");
                         }
+                        // TODO: Instead of sending piece_placed event directly, send collision event and let place_piece handle when to drop piece
                         ev_piece_placed.send(PiecePlacedEvent(entity));
                         return;
                     }
@@ -108,6 +109,7 @@ fn check_wall_collision(
     for &child in children.iter() {
         let child_transform = child_query.get(child).unwrap();
         let child_translation = child_transform.translation();
+        // note: currently we only care about colliding with bottom grid
         if child_translation.x < LEFT_GRID {}
         if child_translation.x > RIGHT_GRID - SQUARE_SIZE {}
         if child_translation.y <= BOTTOM_GRID {
@@ -144,14 +146,10 @@ pub fn fix_position(translation: Vec3, transform: &mut Transform) {
     }
 }
 
-// Currently
 fn collision(collider_bb: BoundingCircle, collidee_bb: Aabb2d) -> Option<Collision> {
     if !collider_bb.intersects(&collidee_bb) {
         return None;
     }
-
-    //println!("collider_bb: {:?}", collider_bb);
-    //println!("collidee_bb: {:?}", collidee_bb);
 
     let closest = collidee_bb.closest_point(collider_bb.center());
     let offset = collider_bb.center() - closest;

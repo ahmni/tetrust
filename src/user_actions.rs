@@ -114,11 +114,12 @@ pub fn user_move_actives(
         let child_transform = child_query.get(child).unwrap();
         let child_translation = child_transform.translation();
         let new_translation = child_translation + direction;
-        if new_translation.x < LEFT_GRID
-            || new_translation.x > RIGHT_GRID - SQUARE_SIZE
-            || new_translation.y < BOTTOM_GRID
-        {
-            return;
+        if new_translation.x < LEFT_GRID || new_translation.x > RIGHT_GRID - SQUARE_SIZE {
+            direction.x = 0.0;
+        }
+
+        if new_translation.y < BOTTOM_GRID {
+            direction.y = 0.0;
         }
     }
 
