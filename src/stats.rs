@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::{get_row, Active, DropTimer, PiecePlacedEvent};
+use crate::{get_row, Active, DropTimer, GracePeriodTimer, PiecePlacedEvent};
 
 #[derive(Component)]
 pub struct Score(pub u32);
@@ -62,6 +62,7 @@ pub fn score(
 pub fn level(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut drop_timer: ResMut<DropTimer>,
+    mut grace_period_timer: ResMut<GracePeriodTimer>,
     mut level_query: Query<(&mut Level, &mut Text)>,
     mut ev_clear: EventReader<ClearEvent>,
     mut lines_cleared: Local<u32>,
@@ -85,16 +86,15 @@ pub fn level(
     // increase game speed
     let prev_duration = drop_timer.0.duration();
     if level.0 <= 10 {
-        drop_timer
-            .0
-            .set_duration(prev_duration - Duration::from_millis(60));
-        println!("drop timer: {:?}", drop_timer.0.duration());
+        let new_duration = prev_duration - Duration::from_millis(60);
+        drop_timer.0.set_duration(new_duration);
+        grace_period_timer.0.set_duration(new_duration);
         return;
     }
 
     if level.0 == 13 || level.0 == 16 || level.0 == 19 || level.0 == 29 {
-        drop_timer
-            .0
-            .set_duration(prev_duration - Duration::from_millis(7));
+        let new_duration = prev_duration - Duration::from_millis(60);
+        drop_timer.0.set_duration(new_duration);
+        grace_period_timer.0.set_duration(new_duration);
     }
 }

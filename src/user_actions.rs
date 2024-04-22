@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use crate::{
-    fix_position, Active, Collision, CollisionEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID,
-    SQUARE_SIZE,
+    fix_position, Active, Collision, CollisionEvent, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID,
+    RIGHT_GRID, SQUARE_SIZE,
 };
 use bevy::prelude::*;
 
@@ -79,6 +79,43 @@ pub fn user_rotate_active(
     }
 }
 
+#[derive(Event)]
+pub struct AttemptPlaceEvent(pub Entity);
+
+#[derive(Resource)]
+pub struct GracePeriodTimer(pub Timer);
+
+pub fn try_to_place_piece(
+    mut ev_attempt_place: EventReader<AttemptPlaceEvent>,
+    mut ev_piece_placed: EventWriter<PiecePlacedEvent>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut grace_period_timer: ResMut<GracePeriodTimer>,
+    query: Query<(&Children), With<Active>>,
+    time: Res<Time>,
+) {
+    let ev_iter = ev_attempt_place.read().next();
+    if ev_iter.is_none() {
+        grace_period_timer.0.reset();
+        return;
+    }
+    let ev = ev_iter.unwrap();
+
+    if !grace_period_timer.0.tick(time.delta()).just_finished()
+        && !keyboard_input.pressed(KeyCode::ArrowDown)
+    {
+        //    //ev_attempt_place.clear();
+        return;
+    }
+
+    if !query.get(ev.0).is_ok() {
+        return;
+    }
+
+    ev_piece_placed.send(PiecePlacedEvent(ev.0));
+
+    grace_period_timer.0.reset();
+}
+
 pub fn user_move_actives(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     child_query: Query<&GlobalTransform, Without<Children>>,
@@ -116,7 +153,7 @@ pub fn user_move_actives(
         // TODO: change to go down until collide
         direction.y += BOTTOM_GRID;
     }
-    if keyboard_input.pressed(KeyCode::ArrowDown) {
+    if keyboard_input.pressed(KeyCode::ArrowDown) && !collisions.contains(&Collision::Top) {
         direction.y -= SQUARE_SIZE;
     }
 

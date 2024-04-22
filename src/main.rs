@@ -146,7 +146,7 @@ fn setup(
         placed_pieces.0.push(row);
     }
 
-    let starting_piece: PieceType = PieceType::Straight;
+    let starting_piece = get_random_piece();
 
     build_active_piece(&mut commands, starting_piece, Vec3::new(0.0, 240.0, -1.0));
 
@@ -170,6 +170,7 @@ fn main() {
         )))
         .insert_resource(PlacedPieces(Vec::new()))
         .insert_resource(NextPieces(Vec::new()))
+        .insert_resource(GracePeriodTimer(Timer::from_seconds(0.5, TimerMode::Once)))
         //.insert_resource(PlaceGracePeriod(Timer::from_seconds(0.25, TimerMode::Once)))
         .add_event::<PiecePlacedEvent>()
         .add_event::<CollisionEvent>()
@@ -179,6 +180,7 @@ fn main() {
         .add_event::<LevelUpEvent>()
         .add_event::<HoldPieceEvent>()
         .add_event::<GameOverEvent>()
+        .add_event::<AttemptPlaceEvent>()
         .add_plugins(DefaultPlugins)
         .add_systems(Startup, (setup, text_setup, sound_setup))
         .add_systems(
@@ -190,6 +192,7 @@ fn main() {
                     user_rotate_active,
                     check_collision,
                     check_in_bounds,
+                    try_to_place_piece,
                     score,
                     place_piece,
                     position_next_pieces,

@@ -1,8 +1,10 @@
+use std::collections::HashSet;
+
 use bevy::prelude::*;
 
 use crate::{
-    build_piece, get_random_piece, Active, ClearEvent, Hold, PieceType, Placed, BOTTOM_GRID,
-    LEFT_GRID, RIGHT_GRID, SQUARE_SIZE, TOP_GRID,
+    build_piece, get_random_piece, Active, ClearEvent, Collision, CollisionEvent, Hold, PieceType,
+    Placed, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE, TOP_GRID,
 };
 
 #[derive(Resource)]
@@ -84,11 +86,11 @@ pub fn place_piece(
         .0
         .iter()
         .enumerate()
-        .filter(|(_, row)| row.len() == 10)
+        .filter(|(_, row)| row.len() >= 10)
         .map(|(i, _)| i)
         .collect();
-    println!("{:?}", rows_to_remove);
-    println!("{:?}", placed_pieces);
+    //println!("{:?}", rows_to_remove);
+    //println!("{:?}", placed_pieces);
 
     if rows_to_remove.len() > 0 {
         // despawn entities in full rows
@@ -100,7 +102,7 @@ pub fn place_piece(
         }
 
         ev_clear.send(ClearEvent(rows_to_remove.len() as u32));
-        println!("pieces removed after {:?}", placed_pieces);
+        //println!("pieces removed after {:?}", placed_pieces);
 
         // shift rows down
         let biggest_row = rows_to_remove.iter().max().unwrap_or(&0);
@@ -257,6 +259,7 @@ pub fn shift_active_down(
     time: Res<Time>,
     mut query: Query<&mut Transform, (With<Active>, Without<Parent>)>,
     mut timer: ResMut<DropTimer>,
+    mut ev_collision: EventReader<CollisionEvent>,
 ) {
     if keyboard_input.pressed(KeyCode::ArrowDown) {
         timer.0.reset();
@@ -266,14 +269,27 @@ pub fn shift_active_down(
         return;
     }
 
+    let default_collision_event = CollisionEvent {
+        collision: HashSet::new(),
+    };
+
+    let collisions = &ev_collision
+        .read()
+        .next()
+        .unwrap_or(&default_collision_event)
+        .collision;
+
+    if collisions.contains(&Collision::Top) {
+        return;
+    }
+
     let mut transform = query.get_single_mut().unwrap();
 
-    println!("{:?}", transform.translation.y);
     if transform.translation.y > BOTTOM_GRID - SQUARE_SIZE
         && !keyboard_input.pressed(KeyCode::ArrowDown)
     {
         transform.translation.y -= SQUARE_SIZE;
     }
 
-    println!("{:?}", transform.translation);
+    //println!("{:?}", transform.translation);
 }

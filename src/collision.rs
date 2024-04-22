@@ -6,7 +6,7 @@ use bevy::{
 };
 
 use crate::{
-    Active, GameOverEvent, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
+    Active, AttemptPlaceEvent, GameOverEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
     TOP_GRID,
 };
 
@@ -49,17 +49,20 @@ pub fn check_collision(
     mut query: Query<(&Children, Entity), With<Active>>,
     child_query: Query<&GlobalTransform, Without<Children>>,
     collidee_query: Query<&GlobalTransform, (With<Placed>, Without<Active>)>,
-    mut ev_piece_placed: EventWriter<PiecePlacedEvent>,
+    mut ev_attempt_place: EventWriter<AttemptPlaceEvent>,
     mut ev_collision: EventWriter<CollisionEvent>,
     mut ev_game_over: EventWriter<GameOverEvent>,
 ) {
     let (children, entity) = query.get_single_mut().unwrap();
 
-    if check_wall_collision(children, &entity, &child_query, &mut ev_piece_placed) {
-        return;
-    }
-
     let mut collision_set: HashSet<Collision> = HashSet::new();
+    let mut should_place_piece = check_wall_collision(
+        children,
+        &entity,
+        &child_query,
+        &mut ev_attempt_place,
+        &mut collision_set,
+    );
 
     for collider_transform in collidee_query.iter() {
         for &child in children.iter() {
@@ -88,9 +91,9 @@ pub fn check_collision(
                             ev_game_over.send(GameOverEvent);
                             panic!("Game Over");
                         }
+                        should_place_piece = true;
                         // TODO: Instead of sending piece_placed event directly, send collision event and let place_piece handle when to drop piece
-                        ev_piece_placed.send(PiecePlacedEvent(entity));
-                        return;
+                        collision_set.insert(Collision::Top);
                     }
                     Collision::Bottom => {}
                 }
@@ -103,13 +106,18 @@ pub fn check_collision(
             collision: collision_set,
         });
     }
+
+    if should_place_piece {
+        ev_attempt_place.send(AttemptPlaceEvent(entity));
+    }
 }
 
 fn check_wall_collision(
     children: &Children,
     entity: &Entity,
     child_query: &Query<&GlobalTransform, Without<Children>>,
-    ev_piece_placed: &mut EventWriter<PiecePlacedEvent>,
+    ev_attempt_place: &mut EventWriter<AttemptPlaceEvent>,
+    ev_collision: &mut HashSet<Collision>,
 ) -> bool {
     for &child in children.iter() {
         let child_transform = child_query.get(child).unwrap();
@@ -118,7 +126,8 @@ fn check_wall_collision(
         if child_translation.x < LEFT_GRID {}
         if child_translation.x > RIGHT_GRID - SQUARE_SIZE {}
         if child_translation.y <= BOTTOM_GRID {
-            ev_piece_placed.send(PiecePlacedEvent(*entity));
+            ev_attempt_place.send(AttemptPlaceEvent(*entity));
+            ev_collision.insert(Collision::Top);
             return true;
         }
         if child_translation.y > TOP_GRID - SQUARE_SIZE {}

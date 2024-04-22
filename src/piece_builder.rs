@@ -393,7 +393,6 @@ fn combine_piece_parts(
     children: Vec<Entity>,
 ) {
     if let Some(active) = active {
-        println!("active");
         for entity in [piece].iter().chain(&children) {
             commands.entity(*entity).insert(active.clone());
         }
