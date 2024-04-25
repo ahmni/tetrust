@@ -89,7 +89,7 @@ pub fn sound_effects(
 
     for ev in ev_clear.read() {
         println!("lines cleared: {:?}", ev.0);
-        if ev.0 == 4 {
+        if ev.0.len() == 4 {
             commands.spawn(AudioBundle {
                 source: asset_server.load("sounds/tetris.mp3"),
                 settings: PlaybackSettings {

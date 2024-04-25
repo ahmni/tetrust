@@ -10,6 +10,7 @@ mod wall;
 
 use std::time::Duration;
 
+use animation::*;
 use bevy::prelude::*;
 use collision::*;
 use piece_actions::*;
@@ -325,7 +326,6 @@ pub struct DespawnOnRestart;
 fn game_over(
     mut next_state: ResMut<NextState<GameState>>,
     mut ev_game_over: EventReader<GameOverEvent>,
-    mut ev_restart: EventWriter<RestartGameEvent>,
     mut game_over_menu: Query<&mut Visibility, With<GameOverMenu>>,
 ) {
     if ev_game_over.read().next().is_some() {
@@ -350,10 +350,11 @@ pub fn restart_game(
     mut drop_timer: ResMut<DropTimer>,
     music_controller: Query<&AudioSink, With<GameMusic>>,
     pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
-    if ev_restart.read().next().is_some() {
+    if ev_restart.read().next().is_some() || keyboard_input.just_pressed(KeyCode::KeyR) {
         for row in placed_pieces.0.iter_mut() {
-            row.clear();
+            row.resize(10, None);
         }
 
         next_pieces.0.clear();
@@ -369,7 +370,6 @@ pub fn restart_game(
             music_controller,
             pause_menu_query,
         );
-        next_state.set(GameState::Playing);
 
         *game_over_menu.single_mut() = Visibility::Hidden;
         drop_timer.0.set_duration(Duration::from_millis(500));
@@ -418,7 +418,8 @@ fn setup(
 
     // build placed piece grid
     for _ in 0..20 {
-        let row: Vec<Entity> = Vec::new();
+        let mut row: Vec<Option<Entity>> = Vec::with_capacity(10);
+        row.resize(10, None);
         placed_pieces.0.push(row);
     }
 
@@ -452,6 +453,14 @@ fn main() {
         .insert_resource(PlacedPieces(Vec::new()))
         .insert_resource(NextPieces(Vec::new()))
         .insert_resource(GracePeriodTimer(Timer::from_seconds(0.5, TimerMode::Once)))
+        .insert_resource(AttemptingPlaceAnimationTimer(Timer::from_seconds(
+            0.1,
+            TimerMode::Repeating,
+        )))
+        .insert_resource(ClearingAnimationTimer(Timer::from_seconds(
+            0.05,
+            TimerMode::Repeating,
+        )))
         //.insert_resource(PlaceGracePeriod(Timer::from_seconds(0.25, TimerMode::Once)))
         .add_event::<PiecePlacedEvent>()
         .add_event::<CollisionEvent>()
@@ -480,8 +489,11 @@ fn main() {
                     game_over,
                     check_in_bounds,
                     try_to_place_piece,
+                    placing_piece_animation,
                     score,
+                    place_piece_animation,
                     place_piece,
+                    clear_rows,
                     position_next_pieces,
                     hold_piece,
                     level,
@@ -491,7 +503,7 @@ fn main() {
                 pause_music,
                 pause_button.run_if(in_state(GameState::Paused)),
                 restart_button.run_if(not(in_state(GameState::Playing))),
-                restart_game.run_if(not(in_state(GameState::Playing))),
+                restart_game,
                 sound_effects,
                 pause_game.run_if(not(in_state(GameState::GameOver))),
                 button_system,

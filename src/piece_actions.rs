@@ -1,4 +1,4 @@
-use std::{collections::HashSet, thread::sleep};
+use std::collections::HashSet;
 
 use bevy::prelude::*;
 
@@ -22,7 +22,7 @@ impl Default for CanHoldPiece {
 }
 
 #[derive(Resource, Debug)]
-pub struct PlacedPieces(pub Vec<Vec<Entity>>);
+pub struct PlacedPieces(pub Vec<Vec<Option<Entity>>>);
 
 //#[derive(Resource)]
 //struct PlaceGracePeriod(Timer);
@@ -48,34 +48,26 @@ pub fn place_piece(
     mut next_pieces: ResMut<NextPieces>,
     mut placed_pieces: ResMut<PlacedPieces>,
 ) {
-    //timer.0.tick(time.delta());
-    //println!("should place piece");
-    //
-    //println!("timer elapsed: {:?}", timer.0.elapsed());
-    //
-    //if !timer.0.finished() {
-    //    return;
-    //}
-    //println!("placing piece");
-    let ev = ev_piece_placed.read().next();
-    if ev.is_none() {
+    let ev = if let Some(event) = ev_piece_placed.read().next() {
+        event
+    } else {
         return;
-    }
-    let ev = ev.unwrap();
+    };
 
     // place piece
     let children = query.get(ev.0).unwrap();
     for &child in children.iter() {
         let (child_global_transform, mut child_transform) = child_query.get_mut(child).unwrap();
         let row = get_row(child_global_transform.translation().y);
+        let col = get_col(child_global_transform.translation().x);
+
         *child_transform = child_global_transform.compute_transform();
-        placed_pieces.0[row].push(child);
+        placed_pieces.0[row][col] = Some(child);
+
         commands.entity(child).remove::<Active>();
         commands.entity(child).insert(Placed);
         commands.entity(child).remove_parent();
     }
-    commands.entity(ev.0).remove::<Active>();
-    commands.entity(ev.0).insert(Placed);
     commands.entity(ev.0).despawn();
 
     // check for full rows
@@ -83,46 +75,18 @@ pub fn place_piece(
         .0
         .iter()
         .enumerate()
-        .filter(|(_, row)| row.len() >= 10)
+        .filter(|(_, row)| row.iter().all(|&cell| cell.is_some()))
+        .filter(|(_, row)| row.len() == 10)
         .map(|(i, _)| i)
         .collect();
     //println!("{:?}", rows_to_remove);
     //println!("{:?}", placed_pieces);
 
     if rows_to_remove.len() > 0 {
-        // despawn entities in full rows
-        for row in &rows_to_remove {
-            for entity in &placed_pieces.0[*row] {
-                commands.entity(*entity).despawn();
-            }
-            placed_pieces.0[*row].clear();
-        }
-
-        ev_clear.send(ClearEvent(rows_to_remove.len() as u32));
-        //println!("pieces removed after {:?}", placed_pieces);
-
-        // shift rows down
-        let biggest_row = rows_to_remove.iter().max().unwrap_or(&0);
-        let mut amount_to_shift = 1;
-        for i in (0..*biggest_row).rev() {
-            let row = &mut placed_pieces.0[i];
-            if rows_to_remove.contains(&i) {
-                amount_to_shift += 1;
-                continue;
-            }
-            for entity in row.iter() {
-                let (_, mut transform) = if let Ok(it) = child_query.get_mut(*entity) {
-                    it
-                } else {
-                    continue;
-                };
-                transform.translation.y -= SQUARE_SIZE * amount_to_shift as f32;
-            }
-            placed_pieces.0[i + amount_to_shift] = row.clone();
-            let row = &mut placed_pieces.0[i];
-            row.clear();
-        }
+        ev_clear.send(ClearEvent(rows_to_remove));
+        return;
     }
+
     // get next piece
     let next_piece = next_pieces.0.remove(0);
     let (children, mut transform, piece_type) = next_piece_query.get_mut(next_piece).unwrap();
@@ -143,7 +107,7 @@ pub fn place_piece(
     next_pieces.0.push(entities[0]);
 }
 
-fn move_piece_to_board(piece_type: &PieceType, translation: &mut Vec3) {
+pub fn move_piece_to_board(piece_type: &PieceType, translation: &mut Vec3) {
     match piece_type {
         PieceType::Square => {
             *translation = Vec3::new(-SQUARE_SIZE / 2.0, 240.0 + SQUARE_SIZE / 2., -1.0);
@@ -229,12 +193,14 @@ pub fn hold_piece(
 }
 
 pub fn get_row(translation_y: f32) -> usize {
-    let mut row = (((TOP_GRID - SQUARE_SIZE) - translation_y) / SQUARE_SIZE) as usize;
-    if row > 19 {
-        row = 19;
-    }
+    let row = (((TOP_GRID - SQUARE_SIZE) - translation_y) / SQUARE_SIZE) as usize;
+    return row.clamp(0, 19);
+}
 
-    return row;
+pub fn get_col(translation_x: f32) -> usize {
+    let col = ((translation_x - LEFT_GRID) / SQUARE_SIZE) as usize;
+
+    return col.clamp(0, 9);
 }
 
 pub const HOLD_PIECE_Y: f32 = 160.0;
@@ -263,6 +229,12 @@ pub fn shift_active_down(
     mut timer: ResMut<DropTimer>,
     mut ev_collision: EventReader<CollisionEvent>,
 ) {
+    let mut transform = if let Ok(piece) = query.get_single_mut() {
+        piece
+    } else {
+        return;
+    };
+
     if keyboard_input.pressed(KeyCode::ArrowDown) {
         timer.0.reset();
     }
@@ -284,8 +256,6 @@ pub fn shift_active_down(
     if collisions.contains(&Collision::Top) {
         return;
     }
-
-    let mut transform = query.get_single_mut().unwrap();
 
     if transform.translation.y > BOTTOM_GRID - SQUARE_SIZE
         && !keyboard_input.pressed(KeyCode::ArrowDown)

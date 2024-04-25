@@ -24,7 +24,11 @@ pub fn user_rotate_active(
     mut child_query: Query<(&GlobalTransform, &mut Transform), Without<Children>>,
     mut ev_rotate: EventWriter<RotateEvent>,
 ) {
-    let (children, mut transform) = query.get_single_mut().unwrap();
+    let (children, mut transform) = if let Ok(piece) = query.get_single_mut() {
+        piece
+    } else {
+        return;
+    };
     //rotate left
     if keyboard_input.just_pressed(KeyCode::KeyZ) {
         let mut translations_to_apply: Vec<Vec3> = vec![];
@@ -85,34 +89,48 @@ pub struct AttemptPlaceEvent(pub Entity);
 #[derive(Resource)]
 pub struct GracePeriodTimer(pub Timer);
 
+#[derive(Component)]
+pub struct AttemptingPlace;
+
 pub fn try_to_place_piece(
+    mut commands: Commands,
     mut ev_attempt_place: EventReader<AttemptPlaceEvent>,
     mut ev_piece_placed: EventWriter<PiecePlacedEvent>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut grace_period_timer: ResMut<GracePeriodTimer>,
-    query: Query<(&Children), With<Active>>,
+    mut query: Query<(&mut Children, Entity), (With<Active>, With<Children>)>,
     time: Res<Time>,
 ) {
-    let ev_iter = ev_attempt_place.read().next();
-    if ev_iter.is_none() {
+    let ev = if let Some(events) = ev_attempt_place.read().next() {
+        events
+    } else {
         grace_period_timer.0.reset();
+        let (_, entity) = if let Ok(piece) = query.get_single_mut() {
+            piece
+        } else {
+            return;
+        };
+        commands.entity(entity).remove::<AttemptingPlace>();
         return;
-    }
-    let ev = ev_iter.unwrap();
+    };
 
+    let (children, piece) = if let Ok(piece) = query.get(ev.0) {
+        piece
+    } else {
+        return;
+    };
+
+    commands.entity(piece).insert(AttemptingPlace);
     if !grace_period_timer.0.tick(time.delta()).just_finished()
         && !keyboard_input.pressed(KeyCode::ArrowDown)
     {
-        //    //ev_attempt_place.clear();
+        ev_attempt_place.clear();
         return;
     }
 
-    if !query.get(ev.0).is_ok() {
-        return;
-    }
+    ev_piece_placed.send(PiecePlacedEvent(piece));
 
-    ev_piece_placed.send(PiecePlacedEvent(ev.0));
-
+    commands.entity(piece).remove::<AttemptingPlace>();
     grace_period_timer.0.reset();
 }
 
@@ -139,7 +157,11 @@ pub fn user_move_actives(
         .unwrap_or(&default_collision_event)
         .collision;
 
-    let (children, mut transform) = query.get_single_mut().unwrap();
+    let (children, mut transform) = if let Ok(piece) = query.get_single_mut() {
+        piece
+    } else {
+        return;
+    };
 
     let mut direction = Vec3::ZERO;
 
@@ -225,6 +247,8 @@ pub fn toggle_pause(
             internal_pause_music(music_controller);
             *pause_menu_query.get_single_mut().unwrap() = Visibility::Visible;
         }
-        _ => {}
+        GameState::GameOver => {
+            next_state.set(GameState::Playing);
+        }
     }
 }

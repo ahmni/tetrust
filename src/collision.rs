@@ -36,7 +36,11 @@ pub fn check_in_bounds(
     mut query: Query<(&Children, &mut Transform), With<Active>>,
     child_query: Query<&GlobalTransform, Without<Children>>,
 ) {
-    let (children, mut transform) = query.get_single_mut().unwrap();
+    let (children, mut transform) = if let Ok(piece) = query.get_single_mut() {
+        piece
+    } else {
+        return;
+    };
 
     for &child in children.iter() {
         let child_global_transform = child_query.get(child).unwrap();
@@ -53,7 +57,11 @@ pub fn check_collision(
     mut ev_collision: EventWriter<CollisionEvent>,
     mut ev_game_over: EventWriter<GameOverEvent>,
 ) {
-    let (children, entity) = query.get_single_mut().unwrap();
+    let (children, entity) = if let Ok(piece) = query.get_single_mut() {
+        piece
+    } else {
+        return;
+    };
 
     let mut collision_set: HashSet<Collision> = HashSet::new();
     let mut should_place_piece = check_wall_collision(

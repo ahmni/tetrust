@@ -30,13 +30,13 @@ pub enum PieceType {
 impl PieceType {
     fn sprite(&self) -> Sprite {
         let color = match self {
-            PieceType::Straight => Color::rgb(0.1, 0.9, 0.98),
-            PieceType::L => Color::rgb(0.98, 0.60, 0.1),
-            PieceType::ReverseL => Color::rgb(0.2, 0.4, 0.9),
-            PieceType::T => Color::rgb(0.7, 0.1, 1.0),
-            PieceType::Z => Color::rgb(0.0, 0.9, 0.1),
-            PieceType::ReverseZ => Color::rgb(0.98, 0.1, 0.1),
-            PieceType::Square => Color::rgb(1.0, 0.9, 0.0),
+            PieceType::Straight => Color::rgba(0.1, 0.9, 0.98, 1.0),
+            PieceType::L => Color::rgba(0.98, 0.60, 0.1, 1.0),
+            PieceType::ReverseL => Color::rgba(0.2, 0.4, 0.9, 1.0),
+            PieceType::T => Color::rgba(0.7, 0.1, 1.0, 1.0),
+            PieceType::Z => Color::rgba(0.0, 0.9, 0.1, 1.0),
+            PieceType::ReverseZ => Color::rgba(0.98, 0.1, 0.1, 1.0),
+            PieceType::Square => Color::rgba(1.0, 0.9, 0.0, 1.0),
         };
 
         Sprite {

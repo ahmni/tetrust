@@ -11,7 +11,7 @@ pub struct Score(pub u32);
 pub struct Level(pub u32);
 
 #[derive(Event)]
-pub struct ClearEvent(pub u32);
+pub struct ClearEvent(pub Vec<usize>);
 
 #[derive(Event)]
 pub struct LevelUpEvent;
@@ -70,7 +70,7 @@ pub fn score(
 
     let level = level.single();
     for ev in ev_clear.read() {
-        score.0 += get_score(ev.0) * level.0;
+        score.0 += get_score(ev.0.len() as u32) * level.0;
     }
     text.sections[0].value = score.0.to_string();
 }
@@ -94,7 +94,7 @@ pub fn level(
 
     let should_increase_level = keyboard_input.just_pressed(KeyCode::KeyL);
     for ev in ev_clear.read() {
-        *lines_cleared += ev.0;
+        *lines_cleared += ev.0.len() as u32;
     }
     if *lines_cleared < 10 && !should_increase_level {
         return;
