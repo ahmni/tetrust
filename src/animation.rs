@@ -39,13 +39,21 @@ pub fn placing_piece_animation(
     }
 }
 
+#[derive(Resource)]
+pub struct FlashingAnimationTimer(pub Timer);
+
 pub fn place_piece_animation(
     mut ev_place_piece: EventReader<PiecePlacedEvent>,
     query: Query<&Children>,
     mut child_query: Query<&mut Sprite>,
     mut flashed: Local<Vec<Entity>>,
+    mut timer: ResMut<FlashingAnimationTimer>,
+    time: Res<Time>,
 ) {
     if !flashed.is_empty() {
+        if !timer.0.tick(time.delta()).just_finished() {
+            return;
+        }
         for entity in flashed.iter() {
             if let Ok(mut sprite) = child_query.get_mut(*entity) {
                 sprite.color.set_l(0.5);

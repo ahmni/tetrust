@@ -461,6 +461,10 @@ fn main() {
             0.05,
             TimerMode::Repeating,
         )))
+        .insert_resource(FlashingAnimationTimer(Timer::from_seconds(
+            0.1,
+            TimerMode::Repeating,
+        )))
         //.insert_resource(PlaceGracePeriod(Timer::from_seconds(0.25, TimerMode::Once)))
         .add_event::<PiecePlacedEvent>()
         .add_event::<CollisionEvent>()
