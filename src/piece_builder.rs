@@ -2,6 +2,8 @@ use bevy::{prelude::*, sprite::Anchor};
 
 use rand::Rng;
 
+use crate::DespawnOnRestart;
+
 pub const SQUARE_SIZE: f32 = 30.0;
 
 #[derive(Component, Clone)]
@@ -11,6 +13,7 @@ pub struct Active;
 pub struct PieceBundle {
     spatial_bundle: SpatialBundle,
     type_bundle: PieceType,
+    despawn: DespawnOnRestart,
 }
 
 #[derive(Component, Clone, Eq, PartialEq, Debug)]
@@ -54,6 +57,7 @@ impl PieceBundle {
                 ..default()
             },
             type_bundle: piece_type.clone(),
+            despawn: DespawnOnRestart,
         }
     }
 }
@@ -61,6 +65,7 @@ impl PieceBundle {
 #[derive(Bundle)]
 pub struct PiecePartBundle {
     sprite_bundle: SpriteBundle,
+    despawn: DespawnOnRestart,
 }
 
 impl PiecePartBundle {
@@ -71,6 +76,7 @@ impl PiecePartBundle {
                 transform: Transform::from_xyz(pos.x, pos.y, pos.z),
                 ..default()
             },
+            despawn: DespawnOnRestart,
         }
     }
 }

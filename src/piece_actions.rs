@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, thread::sleep};
 
 use bevy::prelude::*;
 
@@ -37,9 +37,6 @@ pub struct HoldPieceEvent;
 // Add component to piece marking that it is trying to be placed
 //      Remove this component if not colliding with bottom_grid or another piece
 // if timer finishes and has marker component, place piece`
-
-#[derive(Component)]
-pub struct Placing;
 
 pub fn place_piece(
     mut commands: Commands,
@@ -232,7 +229,12 @@ pub fn hold_piece(
 }
 
 pub fn get_row(translation_y: f32) -> usize {
-    (((TOP_GRID - SQUARE_SIZE) - translation_y) / SQUARE_SIZE) as usize
+    let mut row = (((TOP_GRID - SQUARE_SIZE) - translation_y) / SQUARE_SIZE) as usize;
+    if row > 19 {
+        row = 19;
+    }
+
+    return row;
 }
 
 pub const HOLD_PIECE_Y: f32 = 160.0;

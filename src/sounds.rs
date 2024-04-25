@@ -56,9 +56,13 @@ pub fn pause_music(
     }
 
     if keyboard_input.just_pressed(KeyCode::KeyM) {
-        if let Ok(sink) = music_controller.get_single() {
-            sink.toggle();
-        }
+        internal_pause_music(music_controller);
+    }
+}
+
+pub fn internal_pause_music(music_controller: Query<&AudioSink, With<GameMusic>>) {
+    if let Ok(sink) = music_controller.get_single() {
+        sink.toggle();
     }
 }
 

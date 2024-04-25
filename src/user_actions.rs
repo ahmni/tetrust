@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
 use crate::{
-    fix_position, Active, Collision, CollisionEvent, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID,
-    RIGHT_GRID, SQUARE_SIZE,
+    fix_position, internal_pause_music, Active, Collision, CollisionEvent, GameMusic, GameState,
+    PauseGameEvent, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
 };
 use bevy::prelude::*;
 
@@ -175,4 +175,56 @@ pub fn user_move_actives(
     }
     transform.translation += direction;
     //print!("{:?}", transform.translation);
+}
+
+#[derive(Component)]
+pub struct PauseMenu;
+
+pub fn pause_game(
+    game_state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    music_controller: Query<&AudioSink, With<GameMusic>>,
+    pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
+    mut ev_pause: EventReader<PauseGameEvent>,
+) {
+    if ev_pause.read().next().is_some() {
+        toggle_pause(
+            game_state,
+            &mut next_state,
+            music_controller,
+            pause_menu_query,
+        );
+        return;
+    }
+
+    if keyboard_input.just_pressed(KeyCode::Escape) {
+        toggle_pause(
+            game_state,
+            &mut next_state,
+            music_controller,
+            pause_menu_query,
+        );
+    }
+}
+
+pub fn toggle_pause(
+    game_state: Res<State<GameState>>,
+    next_state: &mut ResMut<NextState<GameState>>,
+    music_controller: Query<&AudioSink, With<GameMusic>>,
+    mut pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
+) {
+    match game_state.get() {
+        GameState::Paused => {
+            next_state.set(GameState::Playing);
+            internal_pause_music(music_controller);
+            *pause_menu_query.get_single_mut().unwrap() = Visibility::Hidden;
+        }
+        GameState::Playing => {
+            next_state.set(GameState::Paused);
+            internal_pause_music(music_controller);
+            *pause_menu_query.get_single_mut().unwrap() = Visibility::Visible;
+        }
+        _ => {}
+    }
 }

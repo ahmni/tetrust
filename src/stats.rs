@@ -33,21 +33,37 @@ pub fn score(
     level: Query<&Level>,
     mut ev_clear: EventReader<ClearEvent>,
     mut ev_piece_placed: EventReader<PiecePlacedEvent>,
+    mut ev_restart: EventReader<crate::RestartGameEvent>,
 ) {
     let (mut score, mut text) = score.get_single_mut().unwrap();
 
+    if ev_restart.read().next().is_some() {
+        score.0 = 0;
+        text.sections[0].value = score.0.to_string();
+        return;
+    }
+
     for ev in ev_piece_placed.read() {
-        let children = piece_query.get(ev.0).unwrap();
+        let children = if let Ok(some) = piece_query.get(ev.0) {
+            some
+        } else {
+            return;
+        };
         let min_row = children
             .iter()
             .map(|&child| {
-                let child_global_transform = child_query.get(child).unwrap();
+                let child_global_transform = if let Ok(some) = child_query.get(child) {
+                    some
+                } else {
+                    return 0;
+                };
                 let child_global_translation = child_global_transform.translation();
                 get_row(child_global_translation.y)
             })
             .min()
-            .unwrap()
-            - 1;
+            .unwrap_or(0);
+
+        let min_row = if min_row > 0 { min_row - 1 } else { min_row };
 
         score.0 += 1 * min_row as u32;
     }
@@ -67,7 +83,15 @@ pub fn level(
     mut ev_clear: EventReader<ClearEvent>,
     mut lines_cleared: Local<u32>,
     mut ev_level_up: EventWriter<LevelUpEvent>,
+    mut ev_restart: EventReader<crate::RestartGameEvent>,
 ) {
+    let (mut level, mut text) = level_query.single_mut();
+    if ev_restart.read().next().is_some() {
+        level.0 = 0;
+        text.sections[0].value = level.0.to_string();
+        return;
+    }
+
     let should_increase_level = keyboard_input.just_pressed(KeyCode::KeyL);
     for ev in ev_clear.read() {
         *lines_cleared += ev.0;
@@ -78,7 +102,7 @@ pub fn level(
 
     *lines_cleared = *lines_cleared % 10;
     // increase level
-    let (mut level, mut text) = level_query.single_mut();
+
     level.0 += 1;
     text.sections[0].value = level.0.to_string();
     ev_level_up.send(LevelUpEvent);
@@ -88,13 +112,11 @@ pub fn level(
     if level.0 <= 10 {
         let new_duration = prev_duration - Duration::from_millis(60);
         drop_timer.0.set_duration(new_duration);
-        grace_period_timer.0.set_duration(new_duration);
         return;
     }
 
     if level.0 == 13 || level.0 == 16 || level.0 == 19 || level.0 == 29 {
         let new_duration = prev_duration - Duration::from_millis(60);
         drop_timer.0.set_duration(new_duration);
-        grace_period_timer.0.set_duration(new_duration);
     }
 }

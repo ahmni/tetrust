@@ -89,7 +89,6 @@ pub fn check_collision(
                         if global_transform.translation().y > TOP_GRID - SQUARE_SIZE * 2.0 {
                             // TODO: implement game over state
                             ev_game_over.send(GameOverEvent);
-                            panic!("Game Over");
                         }
                         should_place_piece = true;
                         // TODO: Instead of sending piece_placed event directly, send collision event and let place_piece handle when to drop piece
