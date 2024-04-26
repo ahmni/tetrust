@@ -39,9 +39,9 @@ pub struct HoldPieceEvent;
 // if timer finishes and has marker component, place piece`
 
 pub fn place_piece(
-    mut commands: Commands,
     query: Query<&Children, With<Active>>,
     mut child_query: Query<(&GlobalTransform, &mut Transform), Without<Children>>,
+    mut commands: Commands,
     mut next_piece_query: Query<(&Children, &mut Transform, &PieceType), With<Children>>,
     mut ev_piece_placed: EventReader<PiecePlacedEvent>,
     mut ev_clear: EventWriter<ClearEvent>,

@@ -67,8 +67,8 @@ pub fn internal_pause_music(music_controller: Query<&AudioSink, With<GameMusic>>
 }
 
 pub fn sound_effects(
-    mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut commands: Commands,
     mut ev_placed: EventReader<PiecePlacedEvent>,
     mut ev_clear: EventReader<ClearEvent>,
     mut ev_rotate: EventReader<RotateEvent>,

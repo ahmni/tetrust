@@ -8,9 +8,9 @@ pub struct AttemptingPlaceAnimationTimer(pub Timer);
 
 pub fn placing_piece_animation(
     query: Query<(&mut Children, Option<&AttemptingPlace>), With<Active>>,
-    mut child_query: Query<&mut Sprite>,
-    mut timer: ResMut<AttemptingPlaceAnimationTimer>,
     time: Res<Time>,
+    mut timer: ResMut<AttemptingPlaceAnimationTimer>,
+    mut child_query: Query<&mut Sprite>,
 ) {
     let (children, _) = if let Ok((children, None)) = query.get_single() {
         for child in children.iter() {
@@ -43,12 +43,12 @@ pub fn placing_piece_animation(
 pub struct FlashingAnimationTimer(pub Timer);
 
 pub fn place_piece_animation(
-    mut ev_place_piece: EventReader<PiecePlacedEvent>,
+    time: Res<Time>,
     query: Query<&Children>,
     mut child_query: Query<&mut Sprite>,
     mut flashed: Local<Vec<Entity>>,
     mut timer: ResMut<FlashingAnimationTimer>,
-    time: Res<Time>,
+    mut ev_place_piece: EventReader<PiecePlacedEvent>,
 ) {
     if !flashed.is_empty() {
         if !timer.0.tick(time.delta()).just_finished() {

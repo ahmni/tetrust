@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{GameOverEvent, RestartGameEvent};
+use crate::RestartGameEvent;
 
 pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);

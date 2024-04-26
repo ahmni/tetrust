@@ -34,8 +34,8 @@ pub struct CollisionEvent {
 }
 
 pub fn check_in_bounds(
-    mut query: Query<(&Children, &mut Transform), With<Active>>,
     child_query: Query<&GlobalTransform, Without<Children>>,
+    mut query: Query<(&Children, &mut Transform), With<Active>>,
 ) {
     let (children, mut transform) = if let Ok(piece) = query.get_single_mut() {
         piece
@@ -51,9 +51,9 @@ pub fn check_in_bounds(
 }
 
 pub fn check_collision(
-    mut query: Query<(&Children, Entity), With<Active>>,
     child_query: Query<&GlobalTransform, Without<Children>>,
     collidee_query: Query<&GlobalTransform, (With<Placed>, Without<Active>)>,
+    mut query: Query<(&Children, Entity), With<Active>>,
     mut ev_attempt_place: EventWriter<AttemptPlaceEvent>,
     mut ev_collision: EventWriter<CollisionEvent>,
     mut ev_game_over: EventWriter<GameOverEvent>,

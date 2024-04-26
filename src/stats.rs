@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::{get_row, Active, DropTimer, GracePeriodTimer, PiecePlacedEvent};
+use crate::{get_row, Active, DropTimer, PiecePlacedEvent};
 
 #[derive(Component)]
 pub struct Score(pub u32);
@@ -27,10 +27,10 @@ fn get_score(rows_cleared: u32) -> u32 {
 }
 
 pub fn score(
-    mut score: Query<(&mut Score, &mut Text)>,
     piece_query: Query<&Children, With<Active>>,
     child_query: Query<&GlobalTransform, With<Active>>,
     level: Query<&Level>,
+    mut score: Query<(&mut Score, &mut Text)>,
     mut ev_clear: EventReader<ClearEvent>,
     mut ev_piece_placed: EventReader<PiecePlacedEvent>,
     mut ev_restart: EventReader<crate::RestartGameEvent>,
@@ -78,7 +78,6 @@ pub fn score(
 pub fn level(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut drop_timer: ResMut<DropTimer>,
-    mut grace_period_timer: ResMut<GracePeriodTimer>,
     mut level_query: Query<(&mut Level, &mut Text)>,
     mut ev_clear: EventReader<ClearEvent>,
     mut lines_cleared: Local<u32>,

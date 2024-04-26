@@ -339,17 +339,17 @@ fn game_over(
 pub struct RestartGameEvent;
 
 pub fn restart_game(
-    mut ev_restart: EventReader<RestartGameEvent>,
-    mut commands: Commands,
     game_state: Res<State<GameState>>,
+    entities_to_despawn: Query<Entity, With<DespawnOnRestart>>,
+    music_controller: Query<&AudioSink, With<GameMusic>>,
+    pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
+    mut commands: Commands,
+    mut ev_restart: EventReader<RestartGameEvent>,
     mut next_state: ResMut<NextState<GameState>>,
     mut placed_pieces: ResMut<PlacedPieces>,
-    entities_to_despawn: Query<Entity, With<DespawnOnRestart>>,
     mut next_pieces: ResMut<NextPieces>,
     mut game_over_menu: Query<&mut Visibility, (With<GameOverMenu>, Without<PauseMenu>)>,
     mut drop_timer: ResMut<DropTimer>,
-    music_controller: Query<&AudioSink, With<GameMusic>>,
-    pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
 ) {
     if ev_restart.read().next().is_some() {
         for row in placed_pieces.0.iter_mut() {
@@ -380,8 +380,8 @@ pub fn restart_game(
 }
 
 fn setup(
-    mut commands: Commands,
     next_pieces: ResMut<NextPieces>,
+    mut commands: Commands,
     mut placed_pieces: ResMut<PlacedPieces>,
 ) {
     commands.spawn(Camera2dBundle::default());
@@ -434,6 +434,7 @@ pub fn setup_pieces(mut commands: Commands, mut next_pieces: ResMut<NextPieces>)
 
     for _ in 0..3 {
         let new_piece = get_random_piece();
+
         let entities = build_piece(&mut commands, new_piece, Vec3::new(0.0, 0.0, -1.0));
         // only push the parent which is always the first entiy
         next_pieces.0.push(entities[0]);

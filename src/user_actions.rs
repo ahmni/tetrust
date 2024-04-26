@@ -94,19 +94,19 @@ pub struct GracePeriodTimer(pub Timer);
 pub struct AttemptingPlace;
 
 pub fn try_to_place_piece(
+    time: Res<Time>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
     mut ev_attempt_place: EventReader<AttemptPlaceEvent>,
     mut ev_piece_placed: EventWriter<PiecePlacedEvent>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut grace_period_timer: ResMut<GracePeriodTimer>,
-    mut query: Query<(&mut Children, Entity), (With<Active>, With<Children>)>,
-    time: Res<Time>,
+    mut query: Query<Entity, (With<Active>, With<Children>)>,
 ) {
     let ev = if let Some(events) = ev_attempt_place.read().next() {
         events
     } else {
         grace_period_timer.0.reset();
-        let (_, entity) = if let Ok(piece) = query.get_single_mut() {
+        let entity = if let Ok(piece) = query.get_single_mut() {
             piece
         } else {
             return;
@@ -115,7 +115,7 @@ pub fn try_to_place_piece(
         return;
     };
 
-    let (children, piece) = if let Ok(piece) = query.get(ev.0) {
+    let piece = if let Ok(piece) = query.get(ev.0) {
         piece
     } else {
         return;
@@ -209,11 +209,11 @@ pub struct PauseMenu;
 
 pub fn pause_game(
     game_state: Res<State<GameState>>,
-    mut next_state: ResMut<NextState<GameState>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     music_controller: Query<&AudioSink, With<GameMusic>>,
     pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
     mut ev_pause: EventReader<PauseGameEvent>,
+    mut next_state: ResMut<NextState<GameState>>,
 ) {
     if ev_pause.read().next().is_some() {
         toggle_pause(
