@@ -25,6 +25,7 @@ pub enum Collision {
     Right,
     Top,
     Bottom,
+    Corner,
 }
 
 #[derive(Event)]
@@ -102,7 +103,10 @@ pub fn check_collision(
                         // TODO: Instead of sending piece_placed event directly, send collision event and let place_piece handle when to drop piece
                         collision_set.insert(Collision::Top);
                     }
-                    Collision::Bottom => {}
+                    Collision::Corner => {
+                        collision_set.insert(Collision::Corner);
+                    }
+                    _ => {}
                 }
             }
         }
@@ -169,6 +173,9 @@ pub fn fix_position(translation: Vec3, transform: &mut Transform) {
 
 fn collision(collider_bb: BoundingCircle, collidee_bb: Aabb2d) -> Option<Collision> {
     if !collider_bb.intersects(&collidee_bb) {
+        if collider_bb.aabb_2d().intersects(&collidee_bb) {
+            return Some(Collision::Corner);
+        }
         return None;
     }
 

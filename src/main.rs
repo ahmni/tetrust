@@ -100,7 +100,7 @@ fn text_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Text2dBundle {
             text: Text::from_section(
-                "1",
+                "0",
                 TextStyle {
                     font: reg_font.clone(),
                     font_size: 42.0,
@@ -350,11 +350,12 @@ pub fn restart_game(
     mut drop_timer: ResMut<DropTimer>,
     music_controller: Query<&AudioSink, With<GameMusic>>,
     pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
 ) {
-    if ev_restart.read().next().is_some() || keyboard_input.just_pressed(KeyCode::KeyR) {
+    if ev_restart.read().next().is_some() {
         for row in placed_pieces.0.iter_mut() {
-            row.resize(10, None);
+            for entity in row.iter_mut() {
+                *entity = None;
+            }
         }
 
         next_pieces.0.clear();
@@ -507,6 +508,7 @@ fn main() {
                 pause_music,
                 pause_button.run_if(in_state(GameState::Paused)),
                 restart_button.run_if(not(in_state(GameState::Playing))),
+                user_restart,
                 restart_game,
                 sound_effects,
                 pause_game.run_if(not(in_state(GameState::GameOver))),

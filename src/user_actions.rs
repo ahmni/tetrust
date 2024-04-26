@@ -2,7 +2,8 @@ use std::collections::HashSet;
 
 use crate::{
     fix_position, internal_pause_music, Active, Collision, CollisionEvent, GameMusic, GameState,
-    PauseGameEvent, PiecePlacedEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
+    PauseGameEvent, PiecePlacedEvent, RestartGameEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID,
+    SQUARE_SIZE,
 };
 use bevy::prelude::*;
 
@@ -195,6 +196,10 @@ pub fn user_move_actives(
     if direction.x != 0.0 {
         ev_move.send(MoveEvent);
     }
+    if direction.y != 0.0 && direction.x != 0.0 && collisions.contains(&Collision::Corner) {
+        direction.y = 0.0;
+    }
+
     transform.translation += direction;
     //print!("{:?}", transform.translation);
 }
@@ -250,5 +255,14 @@ pub fn toggle_pause(
         GameState::GameOver => {
             next_state.set(GameState::Playing);
         }
+    }
+}
+
+pub fn user_restart(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut ev_restart: EventWriter<RestartGameEvent>,
+) {
+    if keyboard_input.just_pressed(KeyCode::KeyR) {
+        ev_restart.send(RestartGameEvent);
     }
 }

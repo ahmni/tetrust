@@ -101,8 +101,12 @@ pub fn clear_rows(
         match clearing.pop() {
             Some(vec) => {
                 for (row, col) in vec {
-                    let entity = placed_pieces.0[row][col];
-                    commands.entity(entity.unwrap()).despawn();
+                    let entity = if let Some(entity) = placed_pieces.0[row][col] {
+                        entity
+                    } else {
+                        continue;
+                    };
+                    commands.entity(entity).despawn();
                     println!("despawning entity: {:?} at {row} {col}", entity);
                     placed_pieces.0[row].remove(col);
                     println!("clearing: {:?}", clearing);
@@ -128,7 +132,9 @@ pub fn clear_rows(
                         }
                         placed_pieces.0[i + amount_to_shift] = row.clone();
                         let row = &mut placed_pieces.0[i];
-                        row.resize(10, None);
+                        for entity in row.iter_mut() {
+                            *entity = None;
+                        }
                     }
 
                     let next_piece = next_pieces.0.remove(0);

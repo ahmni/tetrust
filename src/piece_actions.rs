@@ -83,6 +83,7 @@ pub fn place_piece(
     //println!("{:?}", placed_pieces);
 
     if rows_to_remove.len() > 0 {
+        println!("placed_pieces: {:?}", placed_pieces.0);
         ev_clear.send(ClearEvent(rows_to_remove));
         return;
     }
