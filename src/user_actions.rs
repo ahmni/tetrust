@@ -211,49 +211,55 @@ pub fn pause_game(
     game_state: Res<State<GameState>>,
     keyboard_input: Res<ButtonInput<KeyCode>>,
     music_controller: Query<&AudioSink, With<GameMusic>>,
-    pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
+    mut pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
     mut ev_pause: EventReader<PauseGameEvent>,
     mut next_state: ResMut<NextState<GameState>>,
 ) {
+    let mut pause_menu = pause_menu_query.single_mut();
     if ev_pause.read().next().is_some() {
-        toggle_pause(
+        toggle_menu(
             game_state,
             &mut next_state,
             music_controller,
-            pause_menu_query,
+            &mut pause_menu,
         );
         return;
     }
 
     if keyboard_input.just_pressed(KeyCode::Escape) {
-        toggle_pause(
+        toggle_menu(
             game_state,
             &mut next_state,
             music_controller,
-            pause_menu_query,
+            &mut pause_menu,
         );
     }
 }
 
-pub fn toggle_pause(
+pub fn toggle_menu(
     game_state: Res<State<GameState>>,
     next_state: &mut ResMut<NextState<GameState>>,
     music_controller: Query<&AudioSink, With<GameMusic>>,
-    mut pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
+    menu_visibility: &mut Visibility,
 ) {
     match game_state.get() {
         GameState::Paused => {
             next_state.set(GameState::Playing);
             internal_pause_music(music_controller);
-            *pause_menu_query.get_single_mut().unwrap() = Visibility::Hidden;
+            *menu_visibility = Visibility::Hidden;
         }
         GameState::Playing => {
             next_state.set(GameState::Paused);
             internal_pause_music(music_controller);
-            *pause_menu_query.get_single_mut().unwrap() = Visibility::Visible;
+            *menu_visibility = Visibility::Visible;
         }
         GameState::GameOver => {
             next_state.set(GameState::Playing);
+            *menu_visibility = Visibility::Hidden;
+        }
+        GameState::Title => {
+            next_state.set(GameState::Playing);
+            *menu_visibility = Visibility::Hidden;
         }
     }
 }

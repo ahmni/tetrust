@@ -26,6 +26,7 @@ const SCORE_Y: f32 = -120.0;
 #[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum GameState {
     #[default]
+    Title,
     Playing,
     Paused,
     GameOver,
@@ -121,7 +122,6 @@ fn pause_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn((
             NodeBundle {
                 style: Style {
-                    margin: UiRect::all(Val::Px(25.0)),
                     align_self: AlignSelf::Stretch,
                     justify_self: JustifySelf::Stretch,
                     flex_wrap: FlexWrap::Wrap,
@@ -233,6 +233,95 @@ fn pause_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 }
 
 #[derive(Component)]
+pub struct TitleMenu;
+
+fn title_menu_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    let root = commands
+        .spawn((
+            NodeBundle {
+                style: Style {
+                    align_self: AlignSelf::Stretch,
+                    justify_self: JustifySelf::Stretch,
+                    flex_wrap: FlexWrap::Wrap,
+                    justify_content: JustifyContent::FlexStart,
+                    align_items: AlignItems::FlexStart,
+                    align_content: AlignContent::FlexStart,
+                    height: Val::Percent(100.0),
+                    width: Val::Percent(100.0),
+                    ..Default::default()
+                },
+                background_color: BackgroundColor(Color::DARK_GRAY),
+                visibility: Visibility::Visible,
+                ..Default::default()
+            },
+            TitleMenu,
+        ))
+        .id();
+
+    let button = commands
+        .spawn(NodeBundle {
+            style: Style {
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                align_items: AlignItems::Center,
+                justify_content: JustifyContent::Center,
+                ..default()
+            },
+            ..default()
+        })
+        .with_children(|parent| {
+            parent.spawn((TextBundle {
+                text: Text::from_section(
+                    "TETRUST",
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 60.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                ),
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(100.0),
+                    ..default()
+                },
+                ..default()
+            },));
+            parent
+                .spawn((
+                    ButtonBundle {
+                        style: Style {
+                            width: Val::Px(150.0),
+                            height: Val::Px(65.0),
+                            border: UiRect::all(Val::Px(5.0)),
+                            // horizontally center child text
+                            justify_content: JustifyContent::Center,
+                            // vertically center child text
+                            align_items: AlignItems::Center,
+                            ..default()
+                        },
+                        border_color: BorderColor(Color::BLACK),
+                        background_color: NORMAL_BUTTON.into(),
+                        ..default()
+                    },
+                    TitleButton,
+                ))
+                .with_children(|parent| {
+                    parent.spawn(TextBundle::from_section(
+                        "Play",
+                        TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 40.0,
+                            color: Color::rgb(0.9, 0.9, 0.9),
+                        },
+                    ));
+                });
+        })
+        .id();
+
+    commands.entity(root).add_child(button);
+}
+
+#[derive(Component)]
 pub struct GameOverMenu;
 
 fn game_over_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -240,13 +329,14 @@ fn game_over_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         .spawn((
             NodeBundle {
                 style: Style {
-                    margin: UiRect::all(Val::Px(25.0)),
                     align_self: AlignSelf::Stretch,
                     justify_self: JustifySelf::Stretch,
                     flex_wrap: FlexWrap::Wrap,
                     justify_content: JustifyContent::FlexStart,
                     align_items: AlignItems::FlexStart,
                     align_content: AlignContent::FlexStart,
+                    height: Val::Percent(100.0),
+                    width: Val::Percent(100.0),
                     ..Default::default()
                 },
                 background_color: BackgroundColor(Color::DARK_GRAY),
@@ -342,7 +432,6 @@ pub fn restart_game(
     game_state: Res<State<GameState>>,
     entities_to_despawn: Query<Entity, With<DespawnOnRestart>>,
     music_controller: Query<&AudioSink, With<GameMusic>>,
-    pause_menu_query: Query<&mut Visibility, With<PauseMenu>>,
     mut commands: Commands,
     mut ev_restart: EventReader<RestartGameEvent>,
     mut next_state: ResMut<NextState<GameState>>,
@@ -365,14 +454,13 @@ pub fn restart_game(
         }
 
         setup_pieces(commands, next_pieces);
-        toggle_pause(
+        toggle_menu(
             game_state,
             &mut next_state,
             music_controller,
-            pause_menu_query,
+            &mut game_over_menu.single_mut(),
         );
 
-        *game_over_menu.single_mut() = Visibility::Hidden;
         drop_timer.0.set_duration(Duration::from_millis(500));
     }
 
@@ -482,8 +570,16 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_systems(
             Startup,
-            (setup, text_setup, sound_setup, pause_setup, game_over_setup),
+            (
+                setup,
+                text_setup,
+                sound_setup,
+                pause_setup,
+                game_over_setup,
+                title_menu_setup,
+            ),
         )
+        .add_systems(PreUpdate, position_next_pieces)
         .add_systems(
             Update,
             (
@@ -500,21 +596,21 @@ fn main() {
                     place_piece_animation,
                     place_piece,
                     clear_rows,
-                    position_next_pieces,
-                    hold_piece,
                     level,
                 )
                     .chain()
                     .run_if(in_state(GameState::Playing)),
+                pause_game.run_if(not(in_state(GameState::GameOver))),
                 pause_music,
                 pause_button.run_if(in_state(GameState::Paused)),
                 restart_button.run_if(not(in_state(GameState::Playing))),
+                title_button.run_if(in_state(GameState::Title)),
                 user_restart,
                 restart_game,
                 sound_effects,
-                pause_game.run_if(not(in_state(GameState::GameOver))),
                 button_system,
             ),
         )
+        .add_systems(PostUpdate, hold_piece)
         .run();
 }

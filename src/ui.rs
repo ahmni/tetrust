@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::RestartGameEvent;
+use crate::{toggle_menu, GameMusic, GameState, RestartGameEvent, TitleMenu};
 
 pub const NORMAL_BUTTON: Color = Color::rgb(0.15, 0.15, 0.15);
 const HOVERED_BUTTON: Color = Color::rgb(0.25, 0.25, 0.25);
@@ -58,6 +58,30 @@ pub fn restart_button(
     for interaction in &mut restart_button.iter() {
         if *interaction == Interaction::Pressed {
             ev_restart.send(RestartGameEvent);
+        }
+    }
+}
+
+#[derive(Component)]
+pub struct TitleButton;
+
+pub fn title_button(
+    title_button: Query<&Interaction, (Changed<Interaction>, With<TitleButton>)>,
+    game_state: Res<State<GameState>>,
+    mut next_state: ResMut<NextState<GameState>>,
+    music_controller: Query<&AudioSink, With<GameMusic>>,
+    mut query: Query<&mut Visibility, With<TitleMenu>>,
+) {
+    for interaction in &mut title_button.iter() {
+        if *interaction == Interaction::Pressed {
+            toggle_menu(
+                game_state,
+                &mut next_state,
+                music_controller,
+                &mut query.single_mut(),
+            );
+
+            return;
         }
     }
 }
