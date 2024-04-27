@@ -33,23 +33,6 @@ pub struct CollisionEvent {
     pub collision: HashSet<Collision>,
 }
 
-pub fn check_in_bounds(
-    child_query: Query<&GlobalTransform, Without<Children>>,
-    mut query: Query<(&Children, &mut Transform), With<Active>>,
-) {
-    let (children, mut transform) = if let Ok(piece) = query.get_single_mut() {
-        piece
-    } else {
-        return;
-    };
-
-    for &child in children.iter() {
-        let child_global_transform = child_query.get(child).unwrap();
-        let child_global_translation = child_global_transform.translation();
-        fix_position(child_global_translation, &mut transform);
-    }
-}
-
 pub fn check_collision(
     child_query: Query<&GlobalTransform, Without<Children>>,
     collidee_query: Query<&GlobalTransform, (With<Placed>, Without<Active>)>,
@@ -130,20 +113,26 @@ fn check_wall_collision(
     ev_attempt_place: &mut EventWriter<AttemptPlaceEvent>,
     ev_collision: &mut HashSet<Collision>,
 ) -> bool {
+    let mut should_place_piece = false;
     for &child in children.iter() {
         let child_transform = child_query.get(child).unwrap();
         let child_translation = child_transform.translation();
         // note: currently we only care about colliding with bottom grid
-        if child_translation.x < LEFT_GRID {}
-        if child_translation.x > RIGHT_GRID - SQUARE_SIZE {}
+        if child_translation.x <= LEFT_GRID {
+            ev_collision.insert(Collision::Right);
+        }
+        if child_translation.x >= RIGHT_GRID - SQUARE_SIZE {
+            ev_collision.insert(Collision::Left);
+        }
         if child_translation.y <= BOTTOM_GRID {
             ev_attempt_place.send(AttemptPlaceEvent(*entity));
             ev_collision.insert(Collision::Top);
-            return true;
+            should_place_piece = true;
         }
         if child_translation.y > TOP_GRID - SQUARE_SIZE {}
     }
-    false
+
+    should_place_piece
 }
 
 // TODO: Square rotate does not work with this function

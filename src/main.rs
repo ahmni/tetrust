@@ -584,12 +584,11 @@ fn main() {
             Update,
             (
                 (
-                    shift_active_down,
-                    user_move_actives,
                     user_rotate_active,
                     check_collision,
+                    user_move_actives,
+                    shift_active_down,
                     game_over,
-                    check_in_bounds,
                     try_to_place_piece,
                     placing_piece_animation,
                     score,

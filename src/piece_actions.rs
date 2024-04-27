@@ -4,7 +4,8 @@ use bevy::prelude::*;
 
 use crate::{
     build_piece, get_random_piece, Active, ClearEvent, Collision, CollisionEvent, Hold, PieceType,
-    Placed, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE, TOP_GRID,
+    Placed, RestartGameEvent, RotateEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
+    TOP_GRID,
 };
 
 #[derive(Resource)]
@@ -134,9 +135,14 @@ pub fn hold_piece(
     mut next_pieces: ResMut<NextPieces>,
     mut ev_piece_placed: EventReader<PiecePlacedEvent>,
     mut ev_hold: EventWriter<HoldPieceEvent>,
+    mut ev_reset_game: EventReader<RestartGameEvent>,
     // TODO: turn into component
     mut can_hold: Local<CanHoldPiece>,
 ) {
+    if ev_reset_game.read().count() > 0 {
+        can_hold.0 = true;
+        ev_reset_game.clear();
+    }
     if ev_piece_placed.read().count() > 0 {
         can_hold.0 = true;
     }
@@ -149,7 +155,11 @@ pub fn hold_piece(
 
     can_hold.0 = false;
 
-    let (children, entity, mut transform) = query.get_single_mut().unwrap();
+    let (children, entity, mut transform) = if let Ok(piece) = query.get_single_mut() {
+        piece
+    } else {
+        return;
+    };
 
     for &child in children.iter() {
         commands.entity(child).remove::<Active>();
@@ -229,7 +239,12 @@ pub fn shift_active_down(
     mut query: Query<&mut Transform, (With<Active>, Without<Parent>)>,
     mut timer: ResMut<DropTimer>,
     mut ev_collision: EventReader<CollisionEvent>,
+    mut ev_rotate: EventReader<RotateEvent>,
 ) {
+    if ev_rotate.read().count() > 0 {
+        return;
+    }
+
     let mut transform = if let Ok(piece) = query.get_single_mut() {
         piece
     } else {
@@ -244,15 +259,11 @@ pub fn shift_active_down(
         return;
     }
 
-    let default_collision_event = CollisionEvent {
-        collision: HashSet::new(),
-    };
+    let mut collisions: HashSet<&Collision> = HashSet::new();
 
-    let collisions = &ev_collision
-        .read()
-        .next()
-        .unwrap_or(&default_collision_event)
-        .collision;
+    for collision in ev_collision.read() {
+        collisions.extend(&collision.collision);
+    }
 
     if collisions.contains(&Collision::Top) {
         return;

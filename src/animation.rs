@@ -19,7 +19,6 @@ pub fn placing_piece_animation(
         }
         return;
     } else if let Ok((children, Some(_))) = query.get_single() {
-        println!("attempting to place piece");
         (children, ())
     } else {
         return;
@@ -35,7 +34,6 @@ pub fn placing_piece_animation(
         sprite
             .color
             .set_a(old_alpha - timer.0.duration().as_secs_f32());
-        println!("timer duration: {}", timer.0.elapsed_secs());
     }
 }
 
