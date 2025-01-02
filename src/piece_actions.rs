@@ -3,9 +3,9 @@ use std::collections::HashSet;
 use bevy::prelude::*;
 
 use crate::{
-    build_piece, get_random_piece, Active, ClearEvent, Collision, CollisionEvent, Hold, PieceType,
-    Placed, RestartGameEvent, RotateEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
-    TOP_GRID,
+    build_piece, get_random_piece, Active, ClearEvent, Collision, CollisionEvent, DropPieceEvent,
+    GameOverEvent, Hold, PieceType, Placed, RestartGameEvent, RotateEvent, BOTTOM_GRID, LEFT_GRID,
+    RIGHT_GRID, SQUARE_SIZE, TOP_GRID,
 };
 
 #[derive(Resource)]
@@ -48,6 +48,7 @@ pub fn place_piece(
     mut ev_clear: EventWriter<ClearEvent>,
     mut next_pieces: ResMut<NextPieces>,
     mut placed_pieces: ResMut<PlacedPieces>,
+    mut ev_game_over: EventWriter<GameOverEvent>,
 ) {
     let ev = if let Some(event) = ev_piece_placed.read().next() {
         event
@@ -59,10 +60,16 @@ pub fn place_piece(
     let children = query.get(ev.0).unwrap();
     for &child in children.iter() {
         let (child_global_transform, mut child_transform) = child_query.get_mut(child).unwrap();
-        let row = get_row(child_global_transform.translation().y);
+        let row = get_row_no_clamp(child_global_transform.translation().y);
         let col = get_col(child_global_transform.translation().x);
 
         *child_transform = child_global_transform.compute_transform();
+        println!("row: {}, col: {}", row, col);
+        if row >= 20 {
+            println!("game over");
+            ev_game_over.send(GameOverEvent);
+            return;
+        }
         placed_pieces.0[row][col] = Some(child);
 
         commands.entity(child).remove::<Active>();
@@ -98,21 +105,25 @@ pub fn place_piece(
     commands.entity(next_piece).insert(Active);
     // if square or straight, position needs to move shifted up and to the right by SQUARE_SIZE
     // / 2.0
-    move_piece_to_board(&piece_type, &mut transform.translation);
+    move_piece_to_board(&piece_type, &mut transform.translation, &placed_pieces);
 
     let new_piece = get_random_piece();
     let entities = build_piece(
         &mut commands,
-        new_piece,
+        &new_piece,
         Vec3::new(RIGHT_GRID * 1.5, 90.0, -1.0),
     );
     next_pieces.0.push(entities[0]);
 }
 
-pub fn move_piece_to_board(piece_type: &PieceType, translation: &mut Vec3) {
+pub fn move_piece_to_board(
+    piece_type: &PieceType,
+    translation: &mut Vec3,
+    placed_pieces: &PlacedPieces,
+) {
     match piece_type {
         PieceType::Square => {
-            *translation = Vec3::new(-SQUARE_SIZE / 2.0, 240.0 + SQUARE_SIZE / 2., -1.0);
+            *translation = Vec3::new(-SQUARE_SIZE / 2.0, 270.0 - SQUARE_SIZE / 2., -1.0);
         }
         PieceType::Straight => {
             *translation = Vec3::new(SQUARE_SIZE / 2.0, 240.0 + SQUARE_SIZE / 2., -1.0);
@@ -121,10 +132,24 @@ pub fn move_piece_to_board(piece_type: &PieceType, translation: &mut Vec3) {
             *translation = Vec3::new(0.0, 240.0, -1.0);
         }
     }
+
+    // check if we need to move the piece up to avoid collision with placed pieces
+    let avoid_collision_offset = placed_pieces
+        .0
+        .iter()
+        .take(2)
+        .filter(|row| row.iter().any(|cell| cell.is_some()))
+        .collect::<Vec<_>>()
+        .len() as f32
+        * SQUARE_SIZE;
+    translation.y += avoid_collision_offset;
+
+    println!("avoid_collision_offset : {:?}", avoid_collision_offset);
 }
 
 pub fn hold_piece(
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    placed_pieces: Res<PlacedPieces>,
     mut commands: Commands,
     mut query: Query<(&Children, Entity, &mut Transform), (With<Active>, Without<Hold>)>,
     mut held_query: Query<(&Children, &PieceType, Entity, &mut Transform), With<Hold>>,
@@ -181,7 +206,7 @@ pub fn hold_piece(
         commands.entity(held_entity).remove::<Hold>();
         commands.entity(held_entity).insert(Active);
         // move to board
-        move_piece_to_board(&piece_type, &mut transform.translation)
+        move_piece_to_board(&piece_type, &mut transform.translation, &placed_pieces);
     } else {
         // pull from nextPieces
         let next_piece = next_pieces.0.remove(0);
@@ -193,14 +218,25 @@ pub fn hold_piece(
         commands.entity(next_piece).insert(Active);
         // if square or straight, position needs to move shifted up and to the right by SQUARE_SIZE
         // / 2.0
-        move_piece_to_board(&piece_type, &mut next_transform.translation);
-
+        move_piece_to_board(&piece_type, &mut next_transform.translation, &placed_pieces);
         let new_piece = get_random_piece();
-        let entities = build_piece(&mut commands, new_piece, Vec3::new(0.0, NEXT_PIECE_Y, -1.0));
+        let entities = build_piece(
+            &mut commands,
+            &new_piece,
+            Vec3::new(0.0, NEXT_PIECE_Y, -1.0),
+        );
         next_pieces.0.push(entities[0]);
     }
 
     ev_hold.send(HoldPieceEvent);
+}
+
+pub fn get_row_no_clamp(translation_y: f32) -> usize {
+    let row = ((TOP_GRID - SQUARE_SIZE) - translation_y) / SQUARE_SIZE;
+    if row < 0.0 {
+        return 20;
+    }
+    return row as usize;
 }
 
 pub fn get_row(translation_y: f32) -> usize {
@@ -240,8 +276,16 @@ pub fn shift_active_down(
     mut timer: ResMut<DropTimer>,
     mut ev_collision: EventReader<CollisionEvent>,
     mut ev_rotate: EventReader<RotateEvent>,
+    mut ev_drop_piece: EventReader<DropPieceEvent>,
+    mut ev_piece_placed: EventReader<PiecePlacedEvent>,
 ) {
     if ev_rotate.read().count() > 0 {
+        return;
+    }
+    if ev_drop_piece.read().count() > 0 {
+        return;
+    }
+    if ev_piece_placed.read().count() > 0 {
         return;
     }
 

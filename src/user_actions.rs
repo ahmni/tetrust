@@ -1,14 +1,17 @@
 use std::collections::HashSet;
 
 use crate::{
-    fix_position, get_col, get_row, internal_pause_music, Active, Collision, CollisionEvent,
-    GameMusic, GameState, PauseGameEvent, PiecePlacedEvent, PieceType, PlacedPieces,
-    RestartGameEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
+    get_col, get_row, internal_pause_music, Active, Collision, CollisionEvent, GameMusic,
+    GameState, Ghost, PauseGameEvent, PiecePlacedEvent, PieceType, PlacedPieces, RestartGameEvent,
+    BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
 };
 use bevy::prelude::*;
 
 #[derive(Resource)]
 pub struct MovementTimer(pub Timer);
+
+#[derive(Resource)]
+pub struct UserDropTimer(pub Timer);
 
 #[derive(Component, Default, Debug)]
 pub enum RotationState {
@@ -115,28 +118,44 @@ fn get_kick_values(
     None
 }
 
+pub fn is_valid_positions(child_translations: &Vec<Vec3>, placed_pieces: &PlacedPieces) -> bool {
+    for translation in child_translations {
+        if !is_valid_position(translation, placed_pieces) {
+            return false;
+        }
+    }
+    return true;
+}
+
 fn is_valid_position(translation: &Vec3, placed_pieces: &PlacedPieces) -> bool {
     if translation.x < LEFT_GRID
         || translation.x > RIGHT_GRID - SQUARE_SIZE
         || translation.y < BOTTOM_GRID
     {
-        println!("wall collision");
+        //println!("wall collision");
         return false;
     }
 
     let row = get_row(translation.y);
     let col = get_col(translation.x);
     if placed_pieces.0[row][col].is_some() {
-        println!("piece collision");
+        //println!("piece collision");
         return false;
     }
-
-    println!("valid position");
+    //println!("valid position");
     true
+}
+
+fn get_rotate_translation(translation: Vec3, is_clockwise: bool) -> Vec3 {
+    match is_clockwise {
+        true => Vec3::new(translation.y, -translation.x, translation.z),
+        false => Vec3::new(-translation.y, translation.x, translation.z),
+    }
 }
 
 fn rotate_clockwise(
     children: &Children,
+    is_clockwise: bool,
     rotation_state: &mut RotationState,
     placed_pieces: Res<PlacedPieces>,
     piece_type: &PieceType,
@@ -144,7 +163,7 @@ fn rotate_clockwise(
     child_query: &mut Query<(&GlobalTransform, &mut Transform), Without<Children>>,
     translation: &mut Vec3,
 ) -> bool {
-    let next_state = get_rotation_state(rotation_state, true);
+    let next_state = get_rotation_state(rotation_state, is_clockwise);
     let mut translations_to_apply: Vec<Vec3> = vec![];
     let mut global_translations: Vec<Vec3> = vec![];
     for &child in children.iter() {
@@ -153,11 +172,7 @@ fn rotate_clockwise(
         let child_global_translation = child_transform.0.translation();
         println!("child translation {:?}", child_global_translation);
 
-        let new_translation = Vec3::new(
-            child_translation.y,
-            -child_translation.x,
-            child_translation.z,
-        );
+        let new_translation = get_rotate_translation(child_translation, is_clockwise);
         let new_global_translation = *parent_translation + new_translation;
         //println!("new translation {:?}", new_translation);
         //println!("new global translation {:?}", new_global_translation);
@@ -225,6 +240,23 @@ pub fn user_rotate_active(
     if keyboard_input.just_pressed(KeyCode::KeyZ) {
         if rotate_clockwise(
             children,
+            /* is_clockwise=*/ true,
+            &mut rotation_state,
+            placed_pieces,
+            piece_type,
+            &global_transform.translation(),
+            &mut child_query,
+            &mut transform.translation,
+        ) {
+            ev_rotate.send(RotateEvent);
+        }
+        return;
+    }
+    //rotate right
+    if keyboard_input.just_pressed(KeyCode::KeyX) {
+        if rotate_clockwise(
+            children,
+            /* is_clockwise=*/ false,
             &mut rotation_state,
             placed_pieces,
             piece_type,
@@ -235,35 +267,13 @@ pub fn user_rotate_active(
             ev_rotate.send(RotateEvent);
         }
     }
-    //rotate right
-    if keyboard_input.just_pressed(KeyCode::KeyX) {
-        let mut translations_to_apply: Vec<Vec3> = vec![];
-        for &child in children.iter() {
-            let child_transform = child_query.get_mut(child).unwrap();
-            let child_translation = child_transform.1.translation;
-            let child_global_translation = child_transform.0.translation();
-            let new_translation = Vec3::new(
-                -child_translation.y,
-                child_translation.x,
-                child_translation.z,
-            );
-            let new_global_translation = child_global_translation + new_translation;
-            fix_position(new_global_translation, &mut transform);
-
-            translations_to_apply.push(new_translation);
-            //child_transform.1.translation = new_translation;
-        }
-
-        for (i, &child) in children.iter().enumerate() {
-            let mut child_transform = child_query.get_mut(child).unwrap();
-            child_transform.1.translation = translations_to_apply[i];
-        }
-        ev_rotate.send(RotateEvent);
-    }
 }
 
 #[derive(Event)]
 pub struct AttemptPlaceEvent(pub Entity);
+
+#[derive(Event)]
+pub struct DropPieceEvent(pub Entity);
 
 #[derive(Resource)]
 pub struct GracePeriodTimer(pub Timer);
@@ -273,8 +283,8 @@ pub struct AttemptingPlace;
 
 pub fn try_to_place_piece(
     time: Res<Time>,
-    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut commands: Commands,
+    mut ev_drop_piece: EventReader<DropPieceEvent>,
     mut ev_attempt_place: EventReader<AttemptPlaceEvent>,
     mut ev_piece_placed: EventWriter<PiecePlacedEvent>,
     mut grace_period_timer: ResMut<GracePeriodTimer>,
@@ -293,19 +303,33 @@ pub fn try_to_place_piece(
         return;
     };
 
-    let piece = if let Ok(piece) = query.get(ev.0) {
+    let mut piece = if let Ok(piece) = query.get(ev.0) {
         piece
     } else {
         return;
     };
 
+    // if piece is not found, it means it has either been placed already or has been deleted
+    // due to overlap from game ending
+    if commands.get_entity(piece).is_none() {
+        return;
+    }
+
     commands.entity(piece).insert(AttemptingPlace);
-    if !grace_period_timer.0.tick(time.delta()).just_finished() {
+    if !grace_period_timer.0.tick(time.delta()).just_finished() && ev_drop_piece.is_empty()
+    //    && !keyboard_input.pressed(KeyCode::ArrowDown) // makes it on instant drop if down is
+    //    pressed
+    {
         ev_attempt_place.clear();
         return;
     }
 
+    if !ev_drop_piece.is_empty() {
+        piece = ev_drop_piece.read().next().unwrap().0;
+    }
+
     ev_piece_placed.send(PiecePlacedEvent(piece));
+    println!("piece placed");
 
     commands.entity(piece).remove::<AttemptingPlace>();
     grace_period_timer.0.reset();
@@ -315,16 +339,18 @@ pub fn user_move_actives(
     keyboard_input: Res<ButtonInput<KeyCode>>,
     child_query: Query<&GlobalTransform, Without<Children>>,
     time: Res<Time>,
+    ghost_query: Query<&Transform, (With<Ghost>, Without<Active>, With<Children>)>,
+    mut drop_timer: ResMut<UserDropTimer>,
     mut movement_timer: ResMut<MovementTimer>,
-    mut query: Query<(&Children, &mut Transform), With<Active>>,
+    mut query: Query<(&Children, &mut Transform, Entity), With<Active>>,
     mut ev_collision: EventReader<CollisionEvent>,
     mut ev_move: EventWriter<MoveEvent>,
     mut ev_rotate: EventReader<RotateEvent>,
+    mut ev_drop_piece: EventWriter<DropPieceEvent>,
 ) {
+    let can_drop = drop_timer.0.tick(time.delta()).finished();
+    let can_move = movement_timer.0.tick(time.delta()).finished();
     if ev_rotate.read().count() > 0 {
-        return;
-    }
-    if !movement_timer.0.tick(time.delta()).just_finished() {
         return;
     }
 
@@ -334,7 +360,7 @@ pub fn user_move_actives(
         collisions.extend(&collision.collision);
     }
 
-    let (children, mut transform) = if let Ok(piece) = query.get_single_mut() {
+    let (children, mut transform, entity) = if let Ok(piece) = query.get_single_mut() {
         piece
     } else {
         return;
@@ -342,18 +368,36 @@ pub fn user_move_actives(
 
     let mut direction = Vec3::ZERO;
 
+    if keyboard_input.just_pressed(KeyCode::Space) && can_drop {
+        // TODO: change to go down until collide
+        let ghost_transform = if let Ok(ghost) = ghost_query.get_single() {
+            ghost
+        } else {
+            return;
+        };
+        println!("ghost translation {:?}", ghost_transform.translation);
+        transform.translation = ghost_transform.translation;
+        ev_drop_piece.send(DropPieceEvent(entity));
+        println!("dropped piece");
+        drop_timer.0.reset();
+        return;
+    }
+
+    if !can_move {
+        return;
+    }
+
     if keyboard_input.pressed(KeyCode::ArrowLeft) && !collisions.contains(&Collision::Right) {
         direction.x -= SQUARE_SIZE;
+        movement_timer.0.reset();
     }
     if keyboard_input.pressed(KeyCode::ArrowRight) && !collisions.contains(&Collision::Left) {
         direction.x += SQUARE_SIZE;
-    }
-    if keyboard_input.pressed(KeyCode::Space) {
-        // TODO: change to go down until collide
-        direction.y += BOTTOM_GRID;
+        movement_timer.0.reset();
     }
     if keyboard_input.pressed(KeyCode::ArrowDown) && !collisions.contains(&Collision::Top) {
         direction.y -= SQUARE_SIZE;
+        movement_timer.0.reset();
     }
 
     for &child in children.iter() {

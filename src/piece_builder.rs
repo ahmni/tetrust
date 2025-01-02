@@ -9,6 +9,9 @@ pub const SQUARE_SIZE: f32 = 30.0;
 #[derive(Component, Clone)]
 pub struct Active;
 
+#[derive(Component, Clone)]
+pub struct Ghost;
+
 #[derive(Bundle)]
 pub struct PieceBundle {
     spatial_bundle: SpatialBundle,
@@ -26,18 +29,20 @@ pub enum PieceType {
     Z,
     ReverseZ,
     Square,
+    Ghost(Box<PieceType>),
 }
 
 impl PieceType {
     fn sprite(&self) -> Sprite {
         let color = match self {
-            PieceType::Straight => Color::rgba(0.1, 0.9, 0.98, 1.0),
-            PieceType::L => Color::rgba(0.98, 0.60, 0.1, 1.0),
-            PieceType::ReverseL => Color::rgba(0.2, 0.4, 0.9, 1.0),
-            PieceType::T => Color::rgba(0.7, 0.1, 1.0, 1.0),
-            PieceType::Z => Color::rgba(0.0, 0.9, 0.1, 1.0),
-            PieceType::ReverseZ => Color::rgba(0.98, 0.1, 0.1, 1.0),
-            PieceType::Square => Color::rgba(1.0, 0.9, 0.0, 1.0),
+            PieceType::Straight => Color::rgb_u8(12, 175, 200),
+            PieceType::L => Color::rgb_u8(218, 118, 31),
+            PieceType::ReverseL => Color::rgb_u8(31, 111, 235),
+            PieceType::T => Color::rgb_u8(178, 23, 163),
+            PieceType::Z => Color::rgb_u8(51, 134, 24),
+            PieceType::ReverseZ => Color::rgb_u8(195, 17, 40),
+            PieceType::Square => Color::rgb_u8(205, 180, 2),
+            PieceType::Ghost(_) => Color::rgba(0.0, 0.0, 0.0, 0.5),
         };
 
         Sprite {
@@ -96,22 +101,29 @@ pub fn get_random_piece() -> PieceType {
     }
 }
 
-pub fn build_active_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) {
-    internal_build_piece(commands, piece_type, pos, Some(Active));
+pub fn build_active_piece(commands: &mut Commands, piece_type: &PieceType, pos: Vec3) {
+    internal_build_piece(commands, piece_type, pos, Some(Active), false);
 }
 
-pub fn build_piece(commands: &mut Commands, piece_type: PieceType, pos: Vec3) -> [Entity; 5] {
-    return internal_build_piece(commands, piece_type, pos, None);
+pub fn build_piece(commands: &mut Commands, piece_type: &PieceType, pos: Vec3) -> [Entity; 5] {
+    return internal_build_piece(commands, piece_type, pos, None, false);
 }
 
 fn internal_build_piece(
     commands: &mut Commands,
-    piece_type: PieceType,
+    piece_type: &PieceType,
     pos: Vec3,
     active: Option<Active>,
+    is_ghost: bool,
 ) -> [Entity; 5] {
     match piece_type {
         PieceType::Straight => {
+            let piece_type = if is_ghost {
+                &PieceType::Ghost(Box::new(piece_type.clone()))
+            } else {
+                piece_type
+            };
+
             // Needed to change origin pivot point when rotating
             // https://tetris.fandom.com/wiki/SRS?file=SRS-pieces.png
             let straight_pos = Vec3::new(pos.x + SQUARE_SIZE / 2., pos.y + SQUARE_SIZE / 2., pos.z);
@@ -157,6 +169,12 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::ReverseL => {
+            let piece_type = if is_ghost {
+                &PieceType::Ghost(Box::new(piece_type.clone()))
+            } else {
+                piece_type
+            };
+
             let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
@@ -195,6 +213,12 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::L => {
+            let piece_type = if is_ghost {
+                &PieceType::Ghost(Box::new(piece_type.clone()))
+            } else {
+                piece_type
+            };
+
             let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
@@ -233,6 +257,12 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::Z => {
+            let piece_type = if is_ghost {
+                &PieceType::Ghost(Box::new(piece_type.clone()))
+            } else {
+                piece_type
+            };
+
             let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
@@ -271,6 +301,12 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::ReverseZ => {
+            let piece_type = if is_ghost {
+                &PieceType::Ghost(Box::new(piece_type.clone()))
+            } else {
+                piece_type
+            };
+
             let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
@@ -309,6 +345,12 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::T => {
+            let piece_type = if is_ghost {
+                &PieceType::Ghost(Box::new(piece_type.clone()))
+            } else {
+                piece_type
+            };
+
             let piece = PieceBundle::new(&piece_type, &pos);
             let piece = commands.spawn(piece).id();
 
@@ -343,6 +385,12 @@ fn internal_build_piece(
             return [piece, child1, child2, child3, child4];
         }
         PieceType::Square => {
+            let piece_type = if is_ghost {
+                &PieceType::Ghost(Box::new(piece_type.clone()))
+            } else {
+                piece_type
+            };
+
             // Needed to change origin pivot point when rotating
             // https://tetris.fandom.com/wiki/SRS?file=SRS-pieces.png
             // Sidenote: the reason why we have to subtract the offset isntead of adding is because
@@ -390,6 +438,9 @@ fn internal_build_piece(
                 vec![child1, child2, child3, child4],
             );
             return [piece, child1, child2, child3, child4];
+        }
+        PieceType::Ghost(piece_type) => {
+            return internal_build_piece(commands, piece_type, pos, None, true);
         }
     }
 }

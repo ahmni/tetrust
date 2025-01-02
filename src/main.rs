@@ -1,5 +1,6 @@
 mod animation;
 mod collision;
+mod ghost;
 mod piece_actions;
 mod piece_builder;
 mod sounds;
@@ -13,6 +14,7 @@ use std::time::Duration;
 use animation::*;
 use bevy::prelude::*;
 use collision::*;
+use ghost::update_ghost_position;
 use piece_actions::*;
 use piece_builder::*;
 use sounds::*;
@@ -189,36 +191,6 @@ fn pause_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                 .with_children(|parent| {
                     parent.spawn(TextBundle::from_section(
                         "Play",
-                        TextStyle {
-                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
-                            font_size: 40.0,
-                            color: Color::rgb(0.9, 0.9, 0.9),
-                        },
-                    ));
-                });
-
-            parent
-                .spawn((
-                    ButtonBundle {
-                        style: Style {
-                            width: Val::Px(150.0),
-                            height: Val::Px(65.0),
-                            border: UiRect::all(Val::Px(5.0)),
-                            // horizontally center child text
-                            justify_content: JustifyContent::Center,
-                            // vertically center child text
-                            align_items: AlignItems::Center,
-                            ..default()
-                        },
-                        border_color: BorderColor(Color::BLACK),
-                        background_color: NORMAL_BUTTON.into(),
-                        ..default()
-                    },
-                    RestartButton,
-                ))
-                .with_children(|parent| {
-                    parent.spawn(TextBundle::from_section(
-                        "Restart",
                         TextStyle {
                             font: asset_server.load("fonts/FiraSans-Bold.ttf"),
                             font_size: 40.0,
@@ -404,6 +376,80 @@ fn game_over_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
                         },
                     ));
                 });
+            parent.spawn((TextBundle {
+                text: Text::from_section(
+                    "Score:",
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 40.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                ),
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(200.0),
+                    left: Val::Vw(44.0),
+                    ..default()
+                },
+                ..default()
+            },));
+            parent.spawn((
+                TextBundle {
+                    text: Text::from_section(
+                        "0",
+                        TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 40.0,
+                            color: Color::rgb(0.9, 0.9, 0.9),
+                        },
+                    ),
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        left: Val::Vw(53.0),
+                        top: Val::Px(200.0),
+                        ..default()
+                    },
+                    ..default()
+                },
+                Score(0),
+            ));
+            parent.spawn((TextBundle {
+                text: Text::from_section(
+                    "Level:",
+                    TextStyle {
+                        font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                        font_size: 40.0,
+                        color: Color::rgb(0.9, 0.9, 0.9),
+                    },
+                ),
+                style: Style {
+                    position_type: PositionType::Absolute,
+                    top: Val::Px(250.0),
+                    left: Val::Vw(44.0),
+                    ..default()
+                },
+                ..default()
+            },));
+            parent.spawn((
+                TextBundle {
+                    text: Text::from_section(
+                        "0",
+                        TextStyle {
+                            font: asset_server.load("fonts/FiraSans-Bold.ttf"),
+                            font_size: 40.0,
+                            color: Color::rgb(0.9, 0.9, 0.9),
+                        },
+                    ),
+                    style: Style {
+                        position_type: PositionType::Absolute,
+                        left: Val::Vw(53.0),
+                        top: Val::Px(250.0),
+                        ..default()
+                    },
+                    ..default()
+                },
+                Level(0),
+            ));
         })
         .id();
 
@@ -516,14 +562,28 @@ fn setup(
 }
 
 pub fn setup_pieces(mut commands: Commands, mut next_pieces: ResMut<NextPieces>) {
-    let starting_piece = get_random_piece();
+    let starting_piece_type = get_random_piece();
 
-    build_active_piece(&mut commands, starting_piece, Vec3::new(0.0, 240.0, -1.0));
+    build_active_piece(
+        &mut commands,
+        &starting_piece_type,
+        Vec3::new(0.0, 240.0, -1.0),
+    );
+
+    let ghost_piece_entities = build_piece(
+        &mut commands,
+        &PieceType::Ghost(Box::new(starting_piece_type)),
+        Vec3::new(0.0, BOTTOM_GRID, -0.5),
+    );
+
+    for ghost_entity in ghost_piece_entities {
+        commands.entity(ghost_entity).insert(Ghost);
+    }
 
     for _ in 0..3 {
         let new_piece = get_random_piece();
 
-        let entities = build_piece(&mut commands, new_piece, Vec3::new(0.0, 0.0, -1.0));
+        let entities = build_piece(&mut commands, &new_piece, Vec3::new(0.0, 0.0, -1.0));
         // only push the parent which is always the first entiy
         next_pieces.0.push(entities[0]);
     }
@@ -535,11 +595,9 @@ pub struct GameOverEvent;
 fn main() {
     App::new()
         .init_state::<GameState>()
-        .insert_resource(DropTimer(Timer::from_seconds(0.5, TimerMode::Repeating)))
-        .insert_resource(MovementTimer(Timer::from_seconds(
-            0.075,
-            TimerMode::Repeating,
-        )))
+        .insert_resource(DropTimer(Timer::from_seconds(0.6, TimerMode::Repeating)))
+        .insert_resource(MovementTimer(Timer::from_seconds(0.1, TimerMode::Once)))
+        .insert_resource(UserDropTimer(Timer::from_seconds(0.1, TimerMode::Once)))
         .insert_resource(PlacedPieces(Vec::new()))
         .insert_resource(NextPieces(Vec::new()))
         .insert_resource(GracePeriodTimer(Timer::from_seconds(0.5, TimerMode::Once)))
@@ -567,6 +625,7 @@ fn main() {
         .add_event::<AttemptPlaceEvent>()
         .add_event::<PauseGameEvent>()
         .add_event::<RestartGameEvent>()
+        .add_event::<DropPieceEvent>()
         .add_plugins(DefaultPlugins)
         .add_systems(
             Startup,
@@ -610,6 +669,6 @@ fn main() {
                 button_system,
             ),
         )
-        .add_systems(PostUpdate, hold_piece)
+        .add_systems(PostUpdate, (hold_piece, update_ghost_position))
         .run();
 }

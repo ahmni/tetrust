@@ -5,10 +5,7 @@ use bevy::{
     prelude::*,
 };
 
-use crate::{
-    Active, AttemptPlaceEvent, GameOverEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE,
-    TOP_GRID,
-};
+use crate::{Active, AttemptPlaceEvent, BOTTOM_GRID, LEFT_GRID, RIGHT_GRID, SQUARE_SIZE, TOP_GRID};
 
 // - Check if any active piece is colliding with left or right wall
 // - If so, push piece back inside the game
@@ -39,7 +36,6 @@ pub fn check_collision(
     mut query: Query<(&Children, Entity), With<Active>>,
     mut ev_attempt_place: EventWriter<AttemptPlaceEvent>,
     mut ev_collision: EventWriter<CollisionEvent>,
-    mut ev_game_over: EventWriter<GameOverEvent>,
 ) {
     let (children, entity) = if let Ok(piece) = query.get_single_mut() {
         piece
@@ -48,14 +44,36 @@ pub fn check_collision(
     };
 
     let mut collision_set: HashSet<Collision> = HashSet::new();
-    let mut should_place_piece = check_wall_collision(
-        children,
-        &entity,
-        &child_query,
-        &mut ev_attempt_place,
-        &mut collision_set,
-    );
+    let mut should_place_piece = check_wall_collision(children, &child_query, &mut collision_set);
 
+    check_piece_collision(collidee_query, children, &child_query, &mut collision_set);
+
+    if !collision_set.is_empty() {
+        ev_collision.send(CollisionEvent {
+            collision: collision_set.clone(),
+        });
+    }
+
+    if collision_set.contains(&Collision::Top) {
+        should_place_piece = true;
+    }
+
+    if should_place_piece {
+        ev_attempt_place.send(AttemptPlaceEvent(entity));
+    }
+
+    //if is_game_over {
+    //    ev_game_over.send(GameOverEvent);
+    //}
+}
+
+pub fn check_piece_collision(
+    collidee_query: Query<&GlobalTransform, (With<Placed>, Without<Active>)>,
+    children: &Children,
+    child_query: &Query<&GlobalTransform, Without<Children>>,
+    collision_set: &mut HashSet<Collision>,
+) -> bool {
+    let mut is_game_over = false;
     for collider_transform in collidee_query.iter() {
         for &child in children.iter() {
             let global_transform = child_query.get(child).unwrap();
@@ -77,13 +95,9 @@ pub fn check_collision(
                         collision_set.insert(Collision::Right);
                     }
                     Collision::Top => {
-                        //transform.translation.y += SQUARE_SIZE;
                         if global_transform.translation().y > TOP_GRID - SQUARE_SIZE * 2.0 {
-                            // TODO: implement game over state
-                            ev_game_over.send(GameOverEvent);
+                            is_game_over = true;
                         }
-                        should_place_piece = true;
-                        // TODO: Instead of sending piece_placed event directly, send collision event and let place_piece handle when to drop piece
                         collision_set.insert(Collision::Top);
                     }
                     Collision::Corner => {
@@ -95,22 +109,12 @@ pub fn check_collision(
         }
     }
 
-    if !collision_set.is_empty() {
-        ev_collision.send(CollisionEvent {
-            collision: collision_set,
-        });
-    }
-
-    if should_place_piece {
-        ev_attempt_place.send(AttemptPlaceEvent(entity));
-    }
+    is_game_over
 }
 
-fn check_wall_collision(
+pub fn check_wall_collision(
     children: &Children,
-    entity: &Entity,
     child_query: &Query<&GlobalTransform, Without<Children>>,
-    ev_attempt_place: &mut EventWriter<AttemptPlaceEvent>,
     ev_collision: &mut HashSet<Collision>,
 ) -> bool {
     let mut should_place_piece = false;
@@ -125,7 +129,6 @@ fn check_wall_collision(
             ev_collision.insert(Collision::Left);
         }
         if child_translation.y <= BOTTOM_GRID {
-            ev_attempt_place.send(AttemptPlaceEvent(*entity));
             ev_collision.insert(Collision::Top);
             should_place_piece = true;
         }
@@ -133,31 +136,6 @@ fn check_wall_collision(
     }
 
     should_place_piece
-}
-
-// TODO: Square rotate does not work with this function
-pub fn fix_position(translation: Vec3, transform: &mut Transform) {
-    let mut fixed_position = false;
-    if translation.x < LEFT_GRID {
-        transform.translation.x += SQUARE_SIZE;
-        fixed_position = true;
-    }
-    if translation.x > RIGHT_GRID - SQUARE_SIZE {
-        transform.translation.x -= SQUARE_SIZE;
-        fixed_position = true;
-    }
-    if translation.y < BOTTOM_GRID {
-        println!("translation.y: {}", translation.y);
-        transform.translation.y += SQUARE_SIZE;
-        fixed_position = true;
-    }
-    if translation.y > TOP_GRID - SQUARE_SIZE {
-        transform.translation.y -= SQUARE_SIZE;
-        fixed_position = true;
-    }
-    if fixed_position {
-        println!("fixed position");
-    }
 }
 
 fn collision(collider_bb: BoundingCircle, collidee_bb: Aabb2d) -> Option<Collision> {

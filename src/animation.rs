@@ -44,6 +44,7 @@ pub fn place_piece_animation(
     time: Res<Time>,
     query: Query<&Children>,
     mut child_query: Query<&mut Sprite>,
+    mut original_color: Local<Color>,
     mut flashed: Local<Vec<Entity>>,
     mut timer: ResMut<FlashingAnimationTimer>,
     mut ev_place_piece: EventReader<PiecePlacedEvent>,
@@ -54,7 +55,7 @@ pub fn place_piece_animation(
         }
         for entity in flashed.iter() {
             if let Ok(mut sprite) = child_query.get_mut(*entity) {
-                sprite.color.set_l(0.5);
+                sprite.color = *original_color;
             }
         }
         flashed.clear();
@@ -70,6 +71,7 @@ pub fn place_piece_animation(
 
         for child in children.iter() {
             let mut sprite = child_query.get_mut(*child).unwrap();
+            *original_color = sprite.color;
             sprite.color.set_a(1.0);
             sprite.color.set_l(0.8);
             flashed.push(*child);
@@ -105,9 +107,9 @@ pub fn clear_rows(
                         continue;
                     };
                     commands.entity(entity).despawn();
-                    println!("despawning entity: {:?} at {row} {col}", entity);
+                    //println!("despawning entity: {:?} at {row} {col}", entity);
                     placed_pieces.0[row].remove(col);
-                    println!("clearing: {:?}", clearing);
+                    //println!("clearing: {:?}", clearing);
                 }
                 if clearing.is_empty() {
                     // shift down
@@ -144,12 +146,12 @@ pub fn clear_rows(
                     commands.entity(next_piece).insert(Active);
                     // if square or straight, position needs to move shifted up and to the right by SQUARE_SIZE
                     // / 2.0
-                    move_piece_to_board(&piece_type, &mut transform.translation);
+                    move_piece_to_board(&piece_type, &mut transform.translation, &placed_pieces);
 
                     let new_piece = get_random_piece();
                     let entities = build_piece(
                         &mut commands,
-                        new_piece,
+                        &new_piece,
                         Vec3::new(RIGHT_GRID * 1.5, 90.0, -1.0),
                     );
                     next_pieces.0.push(entities[0]);
