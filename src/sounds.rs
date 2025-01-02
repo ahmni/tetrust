@@ -18,7 +18,7 @@ pub fn sound_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
             source: asset_server.load("sounds/game_music.mp3"),
             settings: PlaybackSettings {
                 mode: PlaybackMode::Loop,
-                volume: Volume::new(0.5),
+                volume: Volume::new(0.3),
                 ..default()
             },
         },
